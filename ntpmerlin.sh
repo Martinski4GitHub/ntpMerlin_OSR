@@ -10,10 +10,10 @@
 ##               | |                                        ##
 ##               |_|                                        ##
 ##                                                          ##
-##           https://github.com/jackyaz/ntpMerlin           ##
+##           https://github.com/AMTM-OSR/ntpMerlin          ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-May-14
+# Last Modified: 2025-May-25
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -35,15 +35,15 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.6"
+readonly SCRIPT_VERSION="v3.4.7"
 readonly SCRIPT_VERSTAG="25051412"
-SCRIPT_BRANCH="develop"
-SCRIPT_REPO="https://raw.githubusercontent.com/jackyaz/$SCRIPT_NAME/$SCRIPT_BRANCH"
+SCRIPT_BRANCH="master"
+SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
 readonly SCRIPT_WEBPAGE_DIR="$(readlink -f /www/user)"
 readonly SCRIPT_WEB_DIR="$SCRIPT_WEBPAGE_DIR/$SCRIPT_NAME_LOWER"
 readonly SHARED_DIR="/jffs/addons/shared-jy"
-readonly SHARED_REPO="https://raw.githubusercontent.com/jackyaz/shared-jy/master"
+readonly SHARED_REPO="https://raw.githubusercontent.com/AMTM-OSR/shared-jy/master"
 readonly SHARED_WEB_DIR="$SCRIPT_WEBPAGE_DIR/shared-jy"
 readonly TEMP_MENU_TREE="/tmp/menuTree.js"
 
@@ -2283,7 +2283,8 @@ ScriptHeader()
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##                 %9s on %-18s          ##${CLEARFORMAT}\n" "$SCRIPT_VERSION" "$ROUTER_MODEL"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##           https://github.com/jackyaz/ntpMerlin           ##${CLEARFORMAT}\\n"
+	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLEARFORMAT}\\n"
+	printf "${BOLD}##      Forked from: https://github.com/jackyaz/ntpMerlin   ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##                 DST is currently %-8s                ##${CLEARFORMAT}\n" "$DST_ENABLED"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
@@ -2930,7 +2931,7 @@ Help & Support
   https://www.snbforums.com/forums/asuswrt-merlin-addons.60/?prefix_id=22
 
 Source code
-  https://github.com/jackyaz/$SCRIPT_NAME
+  https://github.com/AMTM-OSR/$SCRIPT_NAME
 EOF
 	printf "\n"
 }
@@ -3122,13 +3123,13 @@ case "$1" in
 	;;
 	develop)
 		SCRIPT_BRANCH="develop"
-		SCRIPT_REPO="https://raw.githubusercontent.com/jackyaz/$SCRIPT_NAME/$SCRIPT_BRANCH"
+		SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 		Update_Version force
 		exit 0
 	;;
 	stable)
 		SCRIPT_BRANCH="master"
-		SCRIPT_REPO="https://raw.githubusercontent.com/jackyaz/$SCRIPT_NAME/$SCRIPT_BRANCH"
+		SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 		Update_Version force
 		exit 0
 	;;
