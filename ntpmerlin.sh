@@ -13,7 +13,7 @@
 ##           https://github.com/AMTM-OSR/ntpMerlin          ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-May-25
+# Last Modified: 2025-May-27
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,7 +36,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.7"
-readonly SCRIPT_VERSTAG="25051412"
+readonly SCRIPT_VERSTAG="25052712"
 SCRIPT_BRANCH="master"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -2261,15 +2261,15 @@ ScriptHeader()
 	else
 		DST_ENABLED="Active"
 	fi
-	
+
 	DST_SETTING="$(nvram get time_zone_dstoff)"
 	DST_SETTING="$(echo "$DST_SETTING" | sed 's/M//g')"
 	DST_START="$(echo "$DST_SETTING" | cut -f1 -d",")"
 	DST_START="Month $(echo "$DST_START" | cut -f1 -d".") Week $(echo "$DST_START" | cut -f2 -d".") Weekday $(echo "$DST_START" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_START" | cut -f3 -d"." | cut -f2 -d"/")"
 	DST_END="$(echo "$DST_SETTING" | cut -f2 -d",")"
 	DST_END="Month $(echo "$DST_END" | cut -f1 -d".") Week $(echo "$DST_END" | cut -f2 -d".") Weekday $(echo "$DST_END" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_END" | cut -f3 -d"." | cut -f2 -d"/")"
-	
-	printf "\\n"
+
+	printf "\n"
 	printf "${BOLD}##############################################################${CLEARFORMAT}\\n"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##           _           __  __              _  _           ##${CLEARFORMAT}\\n"
@@ -2284,7 +2284,7 @@ ScriptHeader()
 	printf "${BOLD}##                 %9s on %-18s          ##${CLEARFORMAT}\n" "$SCRIPT_VERSION" "$ROUTER_MODEL"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##      Forked from: https://github.com/jackyaz/ntpMerlin   ##${CLEARFORMAT}\\n"
+	printf "${BOLD}##    Forked from: https://github.com/jackyaz/ntpMerlin     ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##                 DST is currently %-8s                ##${CLEARFORMAT}\n" "$DST_ENABLED"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
@@ -2292,7 +2292,7 @@ ScriptHeader()
 	printf "${BOLD}##      DST ends on %-33s       ##${CLEARFORMAT}\\n" "$DST_END"
 	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
 	printf "${BOLD}##############################################################${CLEARFORMAT}\\n"
-	printf "\\n"
+	printf "\n"
 }
 
 ##----------------------------------------##
