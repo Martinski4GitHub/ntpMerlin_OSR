@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Jun-04
+# Last Modified: 2025-Jun-06
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.8"
-readonly SCRIPT_VERSTAG="25060412"
+readonly SCRIPT_VERSTAG="25060622"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -569,6 +569,35 @@ Create_Symlinks()
 	if [ ! -d "$SHARED_WEB_DIR" ]; then
 		ln -s "$SHARED_DIR" "$SHARED_WEB_DIR" 2>/dev/null
 	fi
+}
+
+##-------------------------------------##
+## Added by Martinski W. [2025-Jun-06] ##
+##-------------------------------------##
+_GetConfigParam_()
+{
+   if [ $# -eq 0 ] || [ -z "$1" ]
+   then echo '' ; return 1 ; fi
+
+   local keyValue  checkFile
+   local defValue="$([ $# -eq 2 ] && echo "$2" || echo '')"
+
+   if [ ! -s "$SCRIPT_CONF" ]
+   then echo "$defValue" ; return 0 ; fi
+
+   if [ "$(grep -c "^${1}=" "$SCRIPT_CONF")" -gt 1 ]
+   then  ## Remove duplicates. Keep ONLY the 1st key ##
+       checkFile="${SCRIPT_CONF}.DUPKEY.txt"
+       awk "!(/^${1}=/ && dup[/^${1}=/]++)" "$SCRIPT_CONF" > "$checkFile"
+       if diff -q "$checkFile" "$SCRIPT_CONF" >/dev/null 2>&1
+       then rm -f "$checkFile"
+       else mv -f "$checkFile" "$SCRIPT_CONF"
+       fi
+   fi
+
+   keyValue="$(grep "^${1}=" "$SCRIPT_CONF" | cut -d'=' -f2)"
+   echo "${keyValue:=$defValue}"
+   return 0
 }
 
 ##----------------------------------------##
@@ -1131,7 +1160,7 @@ TimeServer_Customise()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jan-04] ##
+## Modified by Martinski W. [2025-Jun-06] ##
 ##----------------------------------------##
 ScriptStorageLocation()
 {
@@ -1187,8 +1216,8 @@ ScriptStorageLocation()
 			sleep 2
 			;;
 		check)
-			STORAGELOCATION="$(grep "^STORAGELOCATION=" "$SCRIPT_CONF" | cut -f2 -d'=')"
-			echo "${STORAGELOCATION:=jffs}"
+			STORAGELOCATION="$(_GetConfigParam_ STORAGELOCATION jffs)"
+			echo "$STORAGELOCATION"
 			;;
 		load)
 			STORAGELOCATION="$(ScriptStorageLocation check)"
@@ -1208,6 +1237,9 @@ ScriptStorageLocation()
 	esac
 }
 
+##----------------------------------------##
+## Modified by Martinski W. [2025-Jun-06] ##
+##----------------------------------------##
 OutputTimeMode()
 {
 	case "$1" in
@@ -1220,12 +1252,15 @@ OutputTimeMode()
 			Generate_CSVs
 		;;
 		check)
-			OUTPUTTIMEMODE="$(grep "^OUTPUTTIMEMODE=" "$SCRIPT_CONF" | cut -f2 -d'=')"
-			echo "${OUTPUTTIMEMODE:=unix}"
+			OUTPUTTIMEMODE="$(_GetConfigParam_ OUTPUTTIMEMODE unix)"
+			echo "$OUTPUTTIMEMODE"
 		;;
 	esac
 }
 
+##----------------------------------------##
+## Modified by Martinski W. [2025-Jun-06] ##
+##----------------------------------------##
 TimeServer()
 {
 	case "$1" in
@@ -1261,14 +1296,14 @@ TimeServer()
 			Update_File S77chronyd >/dev/null 2>&1
 		;;
 		check)
-			TIMESERVER="$(grep "^TIMESERVER=" "$SCRIPT_CONF" | cut -f2 -d'=')"
-			echo "${TIMESERVER:=ntpd}"
+			TIMESERVER="$(_GetConfigParam_ TIMESERVER ntpd)"
+			echo "$TIMESERVER"
 		;;
 	esac
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Feb-04] ##
+## Modified by Martinski W. [2025-Jun-06] ##
 ##----------------------------------------##
 DaysToKeep()
 {
@@ -1317,14 +1352,14 @@ DaysToKeep()
 			fi
 		;;
 		check)
-			DAYSTOKEEP="$(grep "^DAYSTOKEEP=" "$SCRIPT_CONF" | cut -f2 -d'=')"
-			echo "${DAYSTOKEEP:=30}"
+			DAYSTOKEEP="$(_GetConfigParam_ DAYSTOKEEP 30)"
+			echo "$DAYSTOKEEP"
 		;;
 	esac
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Feb-04] ##
+## Modified by Martinski W. [2025-Jun-06] ##
 ##----------------------------------------##
 LastXResults()
 {
@@ -1374,8 +1409,8 @@ LastXResults()
 			fi
 		;;
 		check)
-			LASTXRESULTS="$(grep "^LASTXRESULTS=" "$SCRIPT_CONF" | cut -f2 -d'=')"
-			echo "${LASTXRESULTS:=10}"
+			LASTXRESULTS="$(_GetConfigParam_ LASTXRESULTS 10)"
+			echo "$LASTXRESULTS"
 		;;
 	esac
 }
@@ -1684,8 +1719,11 @@ JFFS_WarningLogTime()
            sed -i 's/^JFFS_MSGLOGTIME=.*$/JFFS_MSGLOGTIME='"$2"'/' "$SCRIPT_CONF"
            ;;
        check)
-           JFFS_MSGLOGTIME="$(grep "^JFFS_MSGLOGTIME=" "$SCRIPT_CONF" | cut -f2 -d'=')"
-           echo "${JFFS_MSGLOGTIME:=0}"
+           JFFS_MSGLOGTIME="$(_GetConfigParam_ JFFS_MSGLOGTIME 0)"
+           if ! echo "$JFFS_MSGLOGTIME" | grep -qE "^[0-9]+$"
+           then JFFS_MSGLOGTIME=0
+           fi
+           echo "$JFFS_MSGLOGTIME"
            ;;
    esac
 }
@@ -1796,11 +1834,11 @@ _SQLGetDBLogTimeStamp_()
 { printf "[$(date +"$sqlDBLogDateTime")]" ; }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jun-04] ##
+## Modified by Martinski W. [2025-Jun-05] ##
 ##----------------------------------------##
 _ApplyDatabaseSQLCmds_()
 {
-    local errorCount=0  maxErrorCount=5  callFlag
+    local errorCount=0  maxErrorCount=3  callFlag
     local triesCount=0  maxTriesCount=10  sqlErrorMsg
     local tempLogFilePath="/tmp/${SCRIPT_NAME}Stats_TMP_$$.LOG"
     local debgLogFilePath="/tmp/${SCRIPT_NAME}Stats_DEBUG_$$.LOG"
@@ -1823,7 +1861,7 @@ _ApplyDatabaseSQLCmds_()
         fi
         sqlErrorMsg="$(cat "$tempLogFilePath")"
 
-        if echo "$sqlErrorMsg" | grep -qE "^(Parse error|Runtime error|Error:)"
+        if echo "$sqlErrorMsg" | grep -qE "^(Parse error|Runtime error|Error:|Illegal instruction)"
         then
             if echo "$sqlErrorMsg" | grep -qE "^(Parse|Runtime) error .*: database is locked"
             then
