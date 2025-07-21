@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Jun-21
+# Last Modified: 2025-Jul-20
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,8 +36,8 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.8"
-readonly SCRIPT_VERSTAG="25062121"
+readonly SCRIPT_VERSION="v3.4.9"
+readonly SCRIPT_VERSTAG="25072022"
 SCRIPT_BRANCH="master"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -62,13 +62,13 @@ readonly webPageLineTabExp="\{url: \"$webPageFileRegExp\", tabName: "
 readonly webPageLineRegExp="${webPageLineTabExp}\"$SCRIPT_NAME\"\},"
 readonly BEGIN_MenuAddOnsTag="/\*\*BEGIN:_AddOns_\*\*/"
 readonly ENDIN_MenuAddOnsTag="/\*\*ENDIN:_AddOns_\*\*/"
-readonly scriptVERINFO="[${SCRIPT_VERSION}_${SCRIPT_VERSTAG}, Branch: $SCRIPT_BRANCH]"
+readonly branchx_TAG="Branch: $SCRIPT_BRANCH"
+readonly version_TAG="${SCRIPT_VERSION}_${SCRIPT_VERSTAG}"
 
 # For daily CRON job to trim database #
 readonly defTrimDB_Hour=3
 readonly defTrimDB_Mins=7
 
-readonly oneHrSec=3600
 readonly _12Hours=43200
 readonly _24Hours=86400
 readonly _36Hours=129600
@@ -104,6 +104,7 @@ readonly CLEARFORMAT="\\e[0m"
 readonly CLRct="\e[0m"
 readonly REDct="\e[1;31m"
 readonly GRNct="\e[1;32m"
+readonly MGNTct="\e[1;35m"
 readonly CritIREDct="\e[41m"
 readonly CritBREDct="\e[30;101m"
 readonly PassBGRNct="\e[30;102m"
@@ -291,10 +292,12 @@ Update_Version()
 					Update_File shared-jy.tar.gz
 					Update_File timeserverd
 					TIMESERVER_NAME="$(TimeServer check)"
-					if [ "$TIMESERVER_NAME" = "ntpd" ]; then
+					if [ "$TIMESERVER_NAME" = "ntpd" ]
+					then
 						Update_File S77ntpd
 						Update_File ntp.conf
-					elif [ "$TIMESERVER_NAME" = "chronyd" ]; then
+					elif [ "$TIMESERVER_NAME" = "chronyd" ]
+					then
 						Update_File S77chronyd
 						Update_File chrony.conf
 					fi
@@ -329,10 +332,12 @@ Update_Version()
 		Update_File shared-jy.tar.gz
 		Update_File timeserverd
 		TIMESERVER_NAME="$(TimeServer check)"
-		if [ "$TIMESERVER_NAME" = "ntpd" ]; then
+		if [ "$TIMESERVER_NAME" = "ntpd" ]
+		then
 			Update_File ntp.conf
 			Update_File S77ntpd
-		elif [ "$TIMESERVER_NAME" = "chronyd" ]; then
+		elif [ "$TIMESERVER_NAME" = "chronyd" ]
+		then
 			Update_File chrony.conf
 			Update_File S77chronyd
 		fi
@@ -364,7 +369,8 @@ Update_File()
 	then
 		tmpfile="/tmp/$1"
 		Download_File "$SCRIPT_REPO/$1" "$tmpfile"
-		if ! diff -q "$tmpfile" "/opt/etc/init.d/$1" >/dev/null 2>&1; then
+		if ! diff -q "$tmpfile" "/opt/etc/init.d/$1" >/dev/null 2>&1
+		then
 			Print_Output true "New version of $1 downloaded" "$PASS"
 			TimeServer_Customise
 		fi
@@ -557,15 +563,15 @@ Create_Dirs()
 Create_Symlinks()
 {
 	rm -rf "${SCRIPT_WEB_DIR:?}/"* 2>/dev/null
-	
+
 	ln -s /tmp/detect_ntpmerlin.js "$SCRIPT_WEB_DIR/detect_ntpmerlin.js" 2>/dev/null
 	ln -s "$SCRIPT_STORAGE_DIR/ntpstatstext.js" "$SCRIPT_WEB_DIR/ntpstatstext.js" 2>/dev/null
 	ln -s "$SCRIPT_STORAGE_DIR/lastx.csv" "$SCRIPT_WEB_DIR/lastx.htm" 2>/dev/null
-	
+
 	ln -s "$SCRIPT_CONF" "$SCRIPT_WEB_DIR/config.htm" 2>/dev/null
-	
+
 	ln -s "$CSV_OUTPUT_DIR" "$SCRIPT_WEB_DIR/csv" 2>/dev/null
-	
+
 	if [ ! -d "$SHARED_WEB_DIR" ]; then
 		ln -s "$SHARED_DIR" "$SHARED_WEB_DIR" 2>/dev/null
 	fi
@@ -1143,10 +1149,14 @@ _CheckFor_WebGUI_Page_()
    then Mount_WebUI ; fi
 }
 
+##----------------------------------------##
+## Modified by Martinski W. [2025-Jul-16] ##
+##----------------------------------------##
 TimeServer_Customise()
 {
 	TIMESERVER_NAME="$(TimeServer check)"
-	if [ -f "/opt/etc/init.d/S77$TIMESERVER_NAME" ]; then
+	if [ -f "/opt/etc/init.d/S77$TIMESERVER_NAME" ]
+	then
 		"/opt/etc/init.d/S77$TIMESERVER_NAME" stop >/dev/null 2>&1
 	fi
 	rm -f "/opt/etc/init.d/S77$TIMESERVER_NAME"
@@ -1156,10 +1166,12 @@ TimeServer_Customise()
 	then
 		mkdir -p /opt/var/lib/chrony
 		mkdir -p /opt/var/run/chrony
-		chown -R nobody:nobody /opt/var/lib/chrony
-		chown -R nobody:nobody /opt/var/run/chrony
 		chmod -R 770 /opt/var/lib/chrony
 		chmod -R 770 /opt/var/run/chrony
+		chown -R nobody:nobody /opt/var/lib/chrony
+		chown -R nobody:nobody /opt/var/run/chrony
+		[ ! -L /opt/etc/passwd ] && \
+		ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 	fi
 	"/opt/etc/init.d/S77$TIMESERVER_NAME" start >/dev/null 2>&1
 }
@@ -1848,7 +1860,7 @@ _SQLGetDBLogTimeStamp_()
 { printf "[$(date +"$sqlDBLogDateTime")]" ; }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jun-21] ##
+## Modified by Martinski W. [2025-Jul-20] ##
 ##----------------------------------------##
 readonly errorMsgsRegExp="Parse error|Runtime error|Error:"
 readonly corruptedBinExp="Illegal instruction|SQLite header and source version mismatch"
@@ -1936,7 +1948,7 @@ _ApplyDatabaseSQLCmds_()
     fi
     if "$foundError" || "$foundLocked"
     then
-        Print_Output true "SQLite process ${resultStr}" "$ERR"
+        Print_Output true "SQLite process[$callFlag] ${resultStr}" "$ERR"
     fi
 }
 
@@ -3059,8 +3071,8 @@ Entware_Ready()
 ##----------------------------------------##
 Show_About()
 {
+	printf "About ${MGNTct}${SCRIPT_VERS_INFO}${CLRct}\n"
 	cat <<EOF
-About $SCRIPT_VERS_INFO
   $SCRIPT_NAME implements an NTP time server for AsusWRT Merlin
   with charts for daily, weekly and monthly summaries of performance.
   A choice between ntpd and chrony is available.
@@ -3084,8 +3096,8 @@ EOF
 ##----------------------------------------##
 Show_Help()
 {
+	printf "HELP ${MGNTct}${SCRIPT_VERS_INFO}${CLRct}\n"
 	cat <<EOF
-HELP $SCRIPT_VERS_INFO
 Available commands:
   $SCRIPT_NAME_LOWER about            explains functionality
   $SCRIPT_NAME_LOWER update           checks for updates
@@ -3096,8 +3108,8 @@ Available commands:
   $SCRIPT_NAME_LOWER generate         get modem stats and logs. also runs outputcsv
   $SCRIPT_NAME_LOWER outputcsv        create CSVs from database, used by WebUI and export
   $SCRIPT_NAME_LOWER ntpredirect      apply firewall rules to intercept and redirect NTP traffic
-  $SCRIPT_NAME_LOWER develop          switch to development branch
-  $SCRIPT_NAME_LOWER stable           switch to stable branch
+  $SCRIPT_NAME_LOWER develop          switch to development branch version
+  $SCRIPT_NAME_LOWER stable           switch to stable/production branch version
 EOF
 	printf "\n"
 }
@@ -3126,9 +3138,9 @@ CSV_OUTPUT_DIR="$SCRIPT_STORAGE_DIR/csv"
 JFFS_LowFreeSpaceStatus="OK"
 updateJFFS_SpaceInfo=false
 
-if [ "$SCRIPT_BRANCH" != "develop" ]
-then SCRIPT_VERS_INFO=""
-else SCRIPT_VERS_INFO="$scriptVERINFO"
+if [ "$SCRIPT_BRANCH" = "master" ]
+then SCRIPT_VERS_INFO="[$branchx_TAG]"
+else SCRIPT_VERS_INFO="[$version_TAG, $branchx_TAG]"
 fi
 
 ##----------------------------------------##
