@@ -1,63 +1,112 @@
 #!/bin/sh
-#shellcheck disable=SC2039
-trap '' SIGHUP
+#
+# Last Modified: 2025-Jul-16
+#
+# shellcheck disable=SC2039 disable=SC3043
+#
+trap '' HUP
 
-# Wait for NTP before starting
-logger -st timeserverd "Waiting for NTP to sync before starting..."
+# Wait for NTP before starting #
+logger -st "timeserverd_[$$]" "Waiting for NTP to sync before starting..."
 ntpwaitcount=0
-while [ "$(nvram get ntp_ready)" -eq 0 ] && [ "$ntpwaitcount" -lt 600 ]; do
+while [ "$(nvram get ntp_ready)" -eq 0 ] && [ "$ntpwaitcount" -lt 600 ]
+do
 	ntpwaitcount="$((ntpwaitcount + 30))"
-	logger -st timeserverd "Waiting for NTP to sync..."
+	logger -st "timeserverd_[$$]" "Waiting for NTP to sync..."
 	sleep 30
 done
 
-if [ "$ntpwaitcount" -ge 600 ]; then
-	logger -st timeserverd "NTP failed to sync after 10 minutes - please check immediately!"
+if [ "$ntpwaitcount" -ge 600 ]
+then
+	logger -st "timeserverd_[$$]" "NTP failed to sync after 10 minutes - please check immediately!"
 	exit 1
 fi
 
-if [ -f "/opt/share/ntpmerlin.d/config" ]; then
+if [ -f "/opt/share/ntpmerlin.d/config" ]
+then
 	SCRIPT_STORAGE_DIR="/opt/share/ntpmerlin.d"
 else
 	SCRIPT_STORAGE_DIR="/jffs/addons/ntpmerlin.d"
 fi
 
-if [ "$1" = "S77ntpd" ]; then
+##-------------------------------------##
+## Added by Martinski W. [2025-Jul-16] ##
+##-------------------------------------##
+_IsZombieProcess_()
+{
+    if [ $# -eq 0 ] || [ -z "$1" ] || ! echo "$1" | grep -qE "^(ntpd|chronyd)$"
+    then return 1 ; fi
+
+    local theProcStr  thePIDnum  thePPIDnum  logMsg
+
+    theProcStr="$(/usr/bin/top -bn 1 | grep -w "$1" | grep -v "grep" | awk -F ' ' '{if ($4 == "Z") print $0}')"
+    if [ -z "$theProcStr" ]
+    then return 1  #Process OK#
+    fi
+
+    thePIDnum="$(echo "$theProcStr" | awk -F ' ' '{print $1}')"
+    thePPIDnum="$(echo "$theProcStr" | awk -F ' ' '{print $2}')"
+    logMsg="$(printf "A zombie '$1' process was found [PID=%d, PPID=%d]" "$thePIDnum" "$thePPIDnum")"
+    logger -t "timeserverd_[$$]" "$logMsg"
+
+    if [ -n "$thePPIDnum" ] && [ "$thePPIDnum" -gt 2 ]
+    then
+        kill -TERM "$thePPIDnum"
+        wait "$thePPIDnum"
+        if kill -EXIT "$thePPIDnum" 2>/dev/null
+        then
+            kill -KILL "$thePPIDnum"
+            wait "$thePPIDnum"
+        fi
+    fi
+
+    return 0
+}
+
+if [ "$1" = "S77ntpd" ]
+then
 	ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
-	
-	while true; do
+	logger -t "timeserverd_[$$]" "ntpd was started"
+
+	while true
+	do
 		sleep 5
-		if [ "$(pidof ntpd | wc -w)" -lt 1 ]; then
-			logger -t timeserverd "ntpd dead, restarting..."
-			killall -q ntpd
-			sleep 5
+		if [ "$(pidof ntpd | wc -w)" -eq 0 ] || _IsZombieProcess_ ntpd
+		then
+			logger -t "timeserverd_[$$]" "ntpd dead, restarting..."
 			ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
-			logger -t timeserverd "ntpd restarted"
+			logger -t "timeserverd_[$$]" "ntpd was restarted"
 		fi
 	done
-elif [ "$1" = "S77chronyd" ]; then
-	if [ -f /opt/etc/init.d/S06chronyd ]; then
+
+elif [ "$1" = "S77chronyd" ]
+then
+	if [ -f /opt/etc/init.d/S06chronyd ]
+	then
 		/opt/etc/init.d/S06chronyd stop
 		rm -f /opt/etc/init.d/S06chronyd
 	fi
-	
+
 	mkdir -p /opt/var/lib/chrony
 	mkdir -p /opt/var/run/chrony
-	chown -R nobody:nobody /opt/var/lib/chrony
-	chown -R nobody:nobody /opt/var/run/chrony
 	chmod -R 770 /opt/var/lib/chrony
 	chmod -R 770 /opt/var/run/chrony
-	
+	chown -R nobody:nobody /opt/var/lib/chrony
+	chown -R nobody:nobody /opt/var/run/chrony
+	[ ! -L /opt/etc/passwd ] && \
+	ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
+
 	chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
-	
-	while true; do
+	logger -t "timeserverd_[$$]" "chronyd was started"
+
+	while true
+	do
 		sleep 5
-		if [ "$(pidof chronyd | wc -w)" -lt 1 ]; then
-			logger -t timeserverd "chronyd dead, restarting..."
-			killall -q chronyd
-			sleep 5
+		if [ "$(pidof chronyd | wc -w)" -eq 0 ] || _IsZombieProcess_ chronyd
+		then
+			logger -t "timeserverd_[$$]" "chronyd dead, restarting..."
 			chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
-			logger -t timeserverd "chronyd restarted"
+			logger -t "timeserverd_[$$]" "chronyd was restarted"
 		fi
 	done
 fi
