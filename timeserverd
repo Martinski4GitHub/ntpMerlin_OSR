@@ -1,24 +1,44 @@
 #!/bin/sh
 #
-# Last Modified: 2025-Jul-16
+# Last Modified: 2025-Jul-27
 #
 # shellcheck disable=SC2039 disable=SC3043
 #
 trap '' HUP
 
-# Wait for NTP before starting #
-logger -st "timeserverd_[$$]" "Waiting for NTP to sync before starting..."
-ntpwaitcount=0
-while [ "$(nvram get ntp_ready)" -eq 0 ] && [ "$ntpwaitcount" -lt 600 ]
-do
-	ntpwaitcount="$((ntpwaitcount + 30))"
-	logger -st "timeserverd_[$$]" "Waiting for NTP to sync..."
-	sleep 30
-done
+readonly logTagStr="timeserverd_[$$]"
 
-if [ "$ntpwaitcount" -ge 600 ]
+##-------------------------------------##
+## Added by Martinski W. [2025-Jul-27] ##
+##-------------------------------------##
+WaitFor_NTP_Ready()
+{
+    local theSleepDelay=15  ntpMaxWaitSecs=600  ntpWaitSecs
+
+    [ "$(nvram get ntp_ready)" -eq 1 ] && return 0
+
+    ntpWaitSecs=0
+    logger -st "$logTagStr" "Waiting for NTP to sync before starting..."
+
+    while [ "$(nvram get ntp_ready)" -eq 0 ] && [ "$ntpWaitSecs" -lt "$ntpMaxWaitSecs" ]
+    do
+        sleep "$theSleepDelay"
+        ntpWaitSecs="$((ntpWaitSecs + theSleepDelay))"
+        if [ "$((ntpWaitSecs % 30))" -eq 0 ]
+        then
+            logger -st "$logTagStr" "Waiting for NTP to sync [$ntpWaitSecs secs]..."
+        fi
+    done
+
+    [ "$ntpWaitSecs" -ge "$ntpMaxWaitSecs" ] && return 1
+    logger -st "$logTagStr" "NTP has synced [$ntpWaitSecs secs]."
+    return 0
+}
+
+# Wait for NTP before starting #
+if ! WaitFor_NTP_Ready
 then
-	logger -st "timeserverd_[$$]" "NTP failed to sync after 10 minutes - please check immediately!"
+	logger -st "$logTagStr" "NTP failed to sync after 10 minutes - please check immediately!"
 	exit 1
 fi
 
@@ -47,7 +67,7 @@ _IsZombieProcess_()
     thePIDnum="$(echo "$theProcStr" | awk -F ' ' '{print $1}')"
     thePPIDnum="$(echo "$theProcStr" | awk -F ' ' '{print $2}')"
     logMsg="$(printf "A zombie '$1' process was found [PID=%d, PPID=%d]" "$thePIDnum" "$thePPIDnum")"
-    logger -t "timeserverd_[$$]" "$logMsg"
+    logger -t "$logTagStr" "$logMsg"
 
     if [ -n "$thePPIDnum" ] && [ "$thePPIDnum" -gt 2 ]
     then
@@ -66,16 +86,16 @@ _IsZombieProcess_()
 if [ "$1" = "S77ntpd" ]
 then
 	ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
-	logger -t "timeserverd_[$$]" "ntpd was started"
+	logger -t "$logTagStr" "ntpd was started"
 
 	while true
 	do
 		sleep 5
 		if [ "$(pidof ntpd | wc -w)" -eq 0 ] || _IsZombieProcess_ ntpd
 		then
-			logger -t "timeserverd_[$$]" "ntpd dead, restarting..."
+			logger -t "$logTagStr" "ntpd dead, restarting..."
 			ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
-			logger -t "timeserverd_[$$]" "ntpd was restarted"
+			logger -t "$logTagStr" "ntpd was restarted"
 		fi
 	done
 
@@ -97,16 +117,16 @@ then
 	ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 
 	chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
-	logger -t "timeserverd_[$$]" "chronyd was started"
+	logger -t "$logTagStr" "chronyd was started"
 
 	while true
 	do
 		sleep 5
 		if [ "$(pidof chronyd | wc -w)" -eq 0 ] || _IsZombieProcess_ chronyd
 		then
-			logger -t "timeserverd_[$$]" "chronyd dead, restarting..."
+			logger -t "$logTagStr" "chronyd dead, restarting..."
 			chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
-			logger -t "timeserverd_[$$]" "chronyd was restarted"
+			logger -t "$logTagStr" "chronyd was restarted"
 		fi
 	done
 fi
