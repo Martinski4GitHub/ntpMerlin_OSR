@@ -1,11 +1,12 @@
 #!/bin/sh
 #
-# Last Modified: 2025-Jul-27
+# Last Modified: 2025-Jul-29
 #
 # shellcheck disable=SC2039 disable=SC3043
 #
 trap '' HUP
 
+readonly VERSIONstr="3.4.10"
 readonly logTagStr="timeserverd_[$$]"
 
 ##-------------------------------------##
@@ -35,7 +36,6 @@ WaitFor_NTP_Ready()
     return 0
 }
 
-# Wait for NTP before starting #
 if ! WaitFor_NTP_Ready
 then
 	logger -st "$logTagStr" "NTP failed to sync after 10 minutes - please check immediately!"
@@ -83,8 +83,18 @@ _IsZombieProcess_()
     return 0
 }
 
+##----------------------------------------##
+## Modified by Martinski W. [2025-Jul-29] ##
+##----------------------------------------##
 if [ "$1" = "S77ntpd" ]
 then
+	if [ -f /opt/etc/init.d/S77chronyd ]
+	then
+		/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
+		sleep 2 ; killall -q chronyd ; sleep 2
+		rm -f /opt/etc/init.d/S77chronyd
+	fi
+
 	ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
 	logger -t "$logTagStr" "ntpd was started"
 
@@ -101,10 +111,17 @@ then
 
 elif [ "$1" = "S77chronyd" ]
 then
+	if [ -f /opt/etc/init.d/S77ntpd ]
+	then
+		/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
+		sleep 2 ; killall -q ntpd ; sleep 2
+		rm -f /opt/etc/init.d/S77ntpd
+	fi
+
 	if [ -f /opt/etc/init.d/S06chronyd ]
 	then
-		/opt/etc/init.d/S06chronyd stop
-		rm -f /opt/etc/init.d/S06chronyd
+		/opt/etc/init.d/S06chronyd stop >/dev/null 2>&1
+		sleep 2 ; rm -f /opt/etc/init.d/S06chronyd
 	fi
 
 	mkdir -p /opt/var/lib/chrony
