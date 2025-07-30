@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Jul-25
+# Last Modified: 2025-Jul-29
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.10"
-readonly SCRIPT_VERSTAG="25072522"
+readonly SCRIPT_VERSTAG="25072920"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -386,7 +386,8 @@ Update_File()
 			Print_Output true "$SCRIPT_STORAGE_DIR/$1 does not exist, downloading now." "$PASS"
 		elif [ -f "$SCRIPT_STORAGE_DIR/$1.default" ]
 		then
-			if ! diff -q "$tmpfile" "$SCRIPT_STORAGE_DIR/$1.default" >/dev/null 2>&1; then
+			if ! diff -q "$tmpfile" "$SCRIPT_STORAGE_DIR/$1.default" >/dev/null 2>&1
+			then
 				Download_File "$SCRIPT_REPO/$1" "$SCRIPT_STORAGE_DIR/$1.default"
 				Print_Output true "New default version of $1 downloaded to $SCRIPT_STORAGE_DIR/$1.default, please compare against your $SCRIPT_STORAGE_DIR/$1" "$PASS"
 			fi
@@ -1150,7 +1151,7 @@ _CheckFor_WebGUI_Page_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-16] ##
+## Modified by Martinski W. [2025-Jul-29] ##
 ##----------------------------------------##
 TimeServer_Customise()
 {
@@ -1158,10 +1159,11 @@ TimeServer_Customise()
 	if [ -f "/opt/etc/init.d/S77$TIMESERVER_NAME" ]
 	then
 		"/opt/etc/init.d/S77$TIMESERVER_NAME" stop >/dev/null 2>&1
+		sleep 2
 	fi
 	rm -f "/opt/etc/init.d/S77$TIMESERVER_NAME"
 	Download_File "$SCRIPT_REPO/S77$TIMESERVER_NAME" "/opt/etc/init.d/S77$TIMESERVER_NAME"
-	chmod +x "/opt/etc/init.d/S77$TIMESERVER_NAME"
+	chmod a+x "/opt/etc/init.d/S77$TIMESERVER_NAME"
 	if [ "$TIMESERVER_NAME" = "chronyd" ]
 	then
 		mkdir -p /opt/var/lib/chrony
@@ -1276,14 +1278,16 @@ OutputTimeMode()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jun-06] ##
+## Modified by Martinski W. [2025-Jul-29] ##
 ##----------------------------------------##
 TimeServer()
 {
 	case "$1" in
 		ntpd)
+			printf "Please wait...\n"
 			sed -i 's/^TIMESERVER=.*$/TIMESERVER=ntpd/' "$SCRIPT_CONF"
 			/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
+			sleep 2 ; killall -q chronyd ; sleep 2
 			rm -f /opt/etc/init.d/S77chronyd
 			if [ ! -f /opt/sbin/ntpd ] && [ -x /opt/bin/opkg ]
 			then
@@ -1295,13 +1299,16 @@ TimeServer()
 			Update_File S77ntpd >/dev/null 2>&1
 		;;
 		chronyd)
+			printf "Please wait...\n"
 			sed -i 's/^TIMESERVER=.*$/TIMESERVER=chronyd/' "$SCRIPT_CONF"
 			/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
+			sleep 2 ; killall -q ntpd ; sleep 2
 			rm -f /opt/etc/init.d/S77ntpd
 			if [ ! -f /opt/sbin/chronyd ] && [ -x /opt/bin/opkg ]
 			then
 				opkg update
-				if [ -n "$(opkg info chrony-nts)" ]; then
+				if [ -n "$(opkg info chrony-nts)" ]
+				then
 					opkg install chrony-nts
 					touch "$SCRIPT_STORAGE_DIR/.chronyugraded"
 				else
