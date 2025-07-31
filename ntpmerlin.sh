@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Jul-29
+# Last Modified: 2025-Jul-31
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.10"
-readonly SCRIPT_VERSTAG="25072920"
+readonly SCRIPT_VERSTAG="25073100"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -275,10 +275,12 @@ Update_Version()
 		isupdate="$(echo "$updatecheckresult" | cut -f1 -d',')"
 		localver="$(echo "$updatecheckresult" | cut -f2 -d',')"
 		serverver="$(echo "$updatecheckresult" | cut -f3 -d',')"
-		
-		if [ "$isupdate" = "version" ]; then
+
+		if [ "$isupdate" = "version" ]
+		then
 			Print_Output true "New version of $SCRIPT_NAME available - $serverver" "$PASS"
-		elif [ "$isupdate" = "md5" ]; then
+		elif [ "$isupdate" = "md5" ]
+		then
 			Print_Output true "MD5 hash of $SCRIPT_NAME does not match - hotfix available - $serverver" "$PASS"
 		fi
 
@@ -294,12 +296,12 @@ Update_Version()
 					TIMESERVER_NAME="$(TimeServer check)"
 					if [ "$TIMESERVER_NAME" = "ntpd" ]
 					then
-						Update_File S77ntpd
 						Update_File ntp.conf
+						Update_File S77ntpd
 					elif [ "$TIMESERVER_NAME" = "chronyd" ]
 					then
-						Update_File S77chronyd
 						Update_File chrony.conf
+						Update_File S77chronyd
 					fi
 
 					Update_File ntpdstats_www.asp
@@ -361,20 +363,22 @@ Update_Version()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jan-04] ##
+## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
 Update_File()
 {
 	if [ "$1" = "S77ntpd" ] || [ "$1" = "S77chronyd" ]
 	then
-		tmpfile="/tmp/$1"
-		Download_File "$SCRIPT_REPO/$1" "$tmpfile"
-		if ! diff -q "$tmpfile" "/opt/etc/init.d/$1" >/dev/null 2>&1
+		rm -f "$SCRIPT_DIR"/S77*d
+		srvcefile="$SCRIPT_DIR/$1"
+		Download_File "$SCRIPT_REPO/$1" "$srvcefile"
+		if ! diff -q "$srvcefile" "/opt/etc/init.d/$1" >/dev/null 2>&1
 		then
 			Print_Output true "New version of $1 downloaded" "$PASS"
 			TimeServer_Customise
+		else
+			TimeServer_ServiceCheck false
 		fi
-		rm -f "$tmpfile"
 	elif [ "$1" = "ntp.conf" ] || [ "$1" = "chrony.conf" ]
 	then
 		tmpfile="/tmp/$1"
@@ -420,15 +424,23 @@ Update_File()
 	elif [ "$1" = "timeserverd" ]
 	then
 		tmpfile="/tmp/$1"
-		Download_File "$SCRIPT_REPO/$1" "$tmpfile"
-		if ! diff -q "$tmpfile" "$SCRIPT_DIR/$1" >/dev/null 2>&1
+		if [ -f "$SCRIPT_DIR/$1" ]
 		then
+			Download_File "$SCRIPT_REPO/$1" "$tmpfile"
+			if ! diff -q "$tmpfile" "$SCRIPT_DIR/$1" >/dev/null 2>&1
+			then
+				Download_File "$SCRIPT_REPO/$1" "$SCRIPT_DIR/$1"
+				chmod 0755 "$SCRIPT_DIR/$1"
+				Print_Output true "New version of $1 downloaded" "$PASS"
+				TimeServer_Customise
+			fi
+			rm -f "$tmpfile"
+		else
 			Download_File "$SCRIPT_REPO/$1" "$SCRIPT_DIR/$1"
 			chmod 0755 "$SCRIPT_DIR/$1"
 			Print_Output true "New version of $1 downloaded" "$PASS"
 			TimeServer_Customise
 		fi
-		rm -f "$tmpfile"
 	elif [ "$1" = "shared-jy.tar.gz" ]
 	then
 		if [ ! -f "$SHARED_DIR/${1}.md5" ]
@@ -1151,20 +1163,28 @@ _CheckFor_WebGUI_Page_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-29] ##
+## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
 TimeServer_Customise()
 {
-	TIMESERVER_NAME="$(TimeServer check)"
-	if [ -f "/opt/etc/init.d/S77$TIMESERVER_NAME" ]
+	local TIMESERVER_ID="$(TimeServer check)"
+
+	if [ -f /opt/etc/init.d/S77ntpd ]
 	then
-		"/opt/etc/init.d/S77$TIMESERVER_NAME" stop >/dev/null 2>&1
-		sleep 2
+		/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
+		sleep 2 ; killall -q ntpd ; sleep 2
 	fi
-	rm -f "/opt/etc/init.d/S77$TIMESERVER_NAME"
-	Download_File "$SCRIPT_REPO/S77$TIMESERVER_NAME" "/opt/etc/init.d/S77$TIMESERVER_NAME"
-	chmod a+x "/opt/etc/init.d/S77$TIMESERVER_NAME"
-	if [ "$TIMESERVER_NAME" = "chronyd" ]
+	if [ -f /opt/etc/init.d/S77chronyd ]
+	then
+		/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
+		sleep 2 ; killall -q chronyd ; sleep 2
+	fi
+	rm -f /opt/etc/init.d/S77ntpd /opt/etc/init.d/S77chronyd
+
+	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "/opt/etc/init.d/S77$TIMESERVER_ID"
+	chmod a+x "/opt/etc/init.d/S77$TIMESERVER_ID"
+
+	if [ "$TIMESERVER_ID" = "chronyd" ]
 	then
 		mkdir -p /opt/var/lib/chrony
 		mkdir -p /opt/var/run/chrony
@@ -1175,7 +1195,56 @@ TimeServer_Customise()
 		[ ! -L /opt/etc/passwd ] && \
 		ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 	fi
-	"/opt/etc/init.d/S77$TIMESERVER_NAME" start >/dev/null 2>&1
+	"/opt/etc/init.d/S77$TIMESERVER_ID" restart >/dev/null 2>&1
+}
+
+##-------------------------------------##
+## Added by Martinski W. [2025-Jul-30] ##
+##-------------------------------------##
+TimeServer_ServiceCheck()
+{
+    local runFullCheck=true  TIMESERVER_ID
+    local initTimeServerPath  ntpxTimeServerPath
+
+    if [ $# -gt 0 ] && [ -n "$1" ] && \
+       echo "$1" | grep -qE "^(true|false)$"
+    then runFullCheck="$1" ; fi
+
+    "$runFullCheck" && Entware_Ready
+    TIMESERVER_ID="$(TimeServer check)"
+    initTimeServerPath="/opt/etc/init.d/S77$TIMESERVER_ID"
+    ntpxTimeServerPath="$SCRIPT_DIR/S77$TIMESERVER_ID"
+
+    if "$runFullCheck" || [ ! -s "$ntpxTimeServerPath" ]
+    then
+        Update_File "S77$TIMESERVER_ID" >/dev/null 2>&1
+    else
+        # Make sure we have the ntpMerlin version #
+        if [ -s "$ntpxTimeServerPath" ] && [ -s "$initTimeServerPath" ] && \
+           ! diff -q "$initTimeServerPath" "$ntpxTimeServerPath" >/dev/null 2>&1 
+        then
+            "$initTimeServerPath" stop >/dev/null 2>&1
+            sleep 2
+            cp -fp "$ntpxTimeServerPath" "$initTimeServerPath"
+            chmod a+x "$initTimeServerPath"
+            "$initTimeServerPath" restart
+        fi
+
+        # Stop & remove extraneous service script #
+        if [ "$TIMESERVER_ID" = "chronyd" ] && \
+           [ -f /opt/etc/init.d/S77ntpd ]
+        then
+            /opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
+            sleep 2 ; killall -q ntpd ; sleep 2
+            rm -f /opt/etc/init.d/S77ntpd
+        elif [ "$TIMESERVER_ID" = "ntpd" ] && \
+             [ -f /opt/etc/init.d/S77chronyd ]
+        then
+            /opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
+            sleep 2 ; killall -q chronyd ; sleep 2
+            rm -f /opt/etc/init.d/S77chronyd
+        fi
+    fi
 }
 
 ##----------------------------------------##
@@ -2345,7 +2414,7 @@ Process_Upgrade()
 			then
 				Print_Output true "chrony-nts is available, replacing chrony with chrony-nts..." "$PASS"
 				/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
-				rm -f /opt/etc/init.d/S77chronyd
+				rm -f /opt/etc/init.d/S77chronyd /opt/etc/init.d/S77ntpd
 				opkg remove chrony >/dev/null 2>&1
 				opkg install chrony-nts >/dev/null 2>&1
 				Update_File chrony.conf >/dev/null 2>&1
@@ -2452,7 +2521,7 @@ ScriptHeader()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jun-20] ##
+## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
 MainMenu()
 {
@@ -2523,7 +2592,9 @@ MainMenu()
 		case "$menuOption" in
 			1)
 				printf "\n"
-				if Check_Lock menu; then
+				TimeServer_ServiceCheck
+				if Check_Lock menu
+				then
 					Get_TimeServer_Stats
 					Clear_Lock
 				fi
@@ -2610,9 +2681,10 @@ MainMenu()
 			;;
 			r)
 				printf "\n"
-				TIMESERVER_NAME="$(TimeServer check)"
-				Print_Output true "Restarting $TIMESERVER_NAME..." "$PASS"
-				"/opt/etc/init.d/S77$TIMESERVER_NAME" restart >/dev/null 2>&1
+				TIMESERVER_ID="$(TimeServer check)"
+				Print_Output true "Restarting $TIMESERVER_ID..." "$PASS"
+				TimeServer_ServiceCheck
+				"/opt/etc/init.d/S77$TIMESERVER_ID" restart >/dev/null 2>&1
 				PressEnter
 				break
 			;;
@@ -2775,7 +2847,7 @@ Menu_Install()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-May-14] ##
+## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
 Menu_Startup()
 {
@@ -2810,6 +2882,7 @@ Menu_Startup()
 	NTP_Firmware_Check
 	Shortcut_Script create
 	Mount_WebUI
+	TimeServer_ServiceCheck
 	Clear_Lock
 }
 
@@ -2935,7 +3008,7 @@ _FindandRemoveMenuAddOnsSection_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Feb-16] ##
+## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
 Menu_Uninstall()
 {
@@ -2982,6 +3055,7 @@ Menu_Uninstall()
 
 	rm -f /opt/etc/init.d/S77ntpd
 	rm -f /opt/etc/init.d/S77chronyd
+	rm -f "$SCRIPT_DIR"/S77*d
 
 	SETTINGSFILE="/jffs/addons/custom_settings.txt"
 	sed -i '/ntpmerlin_version_local/d' "$SETTINGSFILE"
@@ -3181,7 +3255,7 @@ then
 fi
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jun-20] ##
+## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
 case "$1" in
 	install)
@@ -3196,6 +3270,7 @@ case "$1" in
 	generate)
 		NTP_Ready
 		Entware_Ready
+		TimeServer_ServiceCheck false
 		Check_Lock
 		Get_TimeServer_Stats
 		Clear_Lock
@@ -3224,8 +3299,9 @@ case "$1" in
 		if [ "$2" = "start" ] && [ "$3" = "$SCRIPT_NAME_LOWER" ]
 		then
 			rm -f /tmp/detect_ntpmerlin.js
+			TimeServer_ServiceCheck
 			Check_Lock webui
-			sleep 3
+			sleep 2
 			Get_TimeServer_Stats
 			updateJFFS_SpaceInfo=false
 			Clear_Lock
