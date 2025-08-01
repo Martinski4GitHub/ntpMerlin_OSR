@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.10"
-readonly SCRIPT_VERSTAG="25073100"
+readonly SCRIPT_VERSTAG="25073122"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -1172,12 +1172,12 @@ TimeServer_Customise()
 	if [ -f /opt/etc/init.d/S77ntpd ]
 	then
 		/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
-		sleep 2 ; killall -q ntpd ; sleep 2
+		sleep 2 ; killall -q ntpd ; sleep 1
 	fi
 	if [ -f /opt/etc/init.d/S77chronyd ]
 	then
 		/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
-		sleep 2 ; killall -q chronyd ; sleep 2
+		sleep 2 ; killall -q chronyd ; sleep 1
 	fi
 	rm -f /opt/etc/init.d/S77ntpd /opt/etc/init.d/S77chronyd
 
@@ -1224,7 +1224,7 @@ TimeServer_ServiceCheck()
            ! diff -q "$initTimeServerPath" "$ntpxTimeServerPath" >/dev/null 2>&1 
         then
             "$initTimeServerPath" stop >/dev/null 2>&1
-            sleep 2
+            sleep 2 ; killall "$TIMESERVER_ID"
             cp -fp "$ntpxTimeServerPath" "$initTimeServerPath"
             chmod a+x "$initTimeServerPath"
             "$initTimeServerPath" restart
@@ -1235,13 +1235,13 @@ TimeServer_ServiceCheck()
            [ -f /opt/etc/init.d/S77ntpd ]
         then
             /opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
-            sleep 2 ; killall -q ntpd ; sleep 2
+            sleep 2 ; killall -q ntpd ; sleep 1
             rm -f /opt/etc/init.d/S77ntpd
         elif [ "$TIMESERVER_ID" = "ntpd" ] && \
              [ -f /opt/etc/init.d/S77chronyd ]
         then
             /opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
-            sleep 2 ; killall -q chronyd ; sleep 2
+            sleep 2 ; killall -q chronyd ; sleep 1
             rm -f /opt/etc/init.d/S77chronyd
         fi
     fi
@@ -1356,7 +1356,7 @@ TimeServer()
 			printf "Please wait...\n"
 			sed -i 's/^TIMESERVER=.*$/TIMESERVER=ntpd/' "$SCRIPT_CONF"
 			/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
-			sleep 2 ; killall -q chronyd ; sleep 2
+			sleep 2 ; killall -q chronyd ; sleep 1
 			rm -f /opt/etc/init.d/S77chronyd
 			if [ ! -f /opt/sbin/ntpd ] && [ -x /opt/bin/opkg ]
 			then
@@ -1371,7 +1371,7 @@ TimeServer()
 			printf "Please wait...\n"
 			sed -i 's/^TIMESERVER=.*$/TIMESERVER=chronyd/' "$SCRIPT_CONF"
 			/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
-			sleep 2 ; killall -q ntpd ; sleep 2
+			sleep 2 ; killall -q ntpd ; sleep 1
 			rm -f /opt/etc/init.d/S77ntpd
 			if [ ! -f /opt/sbin/chronyd ] && [ -x /opt/bin/opkg ]
 			then
@@ -2538,7 +2538,7 @@ MainMenu()
 	if [ "$TIMESERVER_NAME_MENU" = "ntpd" ]
 	then CONFFILE_MENU="$SCRIPT_STORAGE_DIR/ntp.conf"
 	elif [ "$TIMESERVER_NAME_MENU" = "chronyd" ]
-    then CONFFILE_MENU="$SCRIPT_STORAGE_DIR/chrony.conf"
+	then CONFFILE_MENU="$SCRIPT_STORAGE_DIR/chrony.conf"
 	fi
 
 	storageLocStr="$(ScriptStorageLocation check | tr 'a-z' 'A-Z')"
@@ -2561,20 +2561,20 @@ MainMenu()
 	printf "1.    Update timeserver stats now\n"
 	printf "      Database size: ${SETTING}%s${CLEARFORMAT}\n\n" "$(_GetFileSize_ "$NTPDSTATS_DB" HRx)"
 	printf "2.    Toggle redirect of all NTP traffic to %s\n" "$SCRIPT_NAME"
-    printf "      Currently: ${ntpRedirectStatus}${CLEARFORMAT}\n\n"
+	printf "      Currently: ${ntpRedirectStatus}${CLEARFORMAT}\n\n"
 	printf "3.    Edit ${SETTING}%s${CLEARFORMAT} configuration file\n\n" "$(TimeServer check)"
 	printf "4.    Toggle time output mode\n"
-    printf "      Currently: ${SETTING}%s${CLEARFORMAT} time values will be used for CSV exports\n\n" "$(OutputTimeMode check)"
+	printf "      Currently: ${SETTING}%s${CLEARFORMAT} time values will be used for CSV exports\n\n" "$(OutputTimeMode check)"
 	printf "5.    Set number of timeserver stats to show in WebUI\n"
-    printf "      Currently: ${SETTING}%s results will be shown${CLEARFORMAT}\n\n" "$(LastXResults check)"
+	printf "      Currently: ${SETTING}%s results will be shown${CLEARFORMAT}\n\n" "$(LastXResults check)"
 	printf "6.    Set number of days data to keep in database\n"
-    printf "      Currently: ${SETTING}%s days data will be kept${CLEARFORMAT}\n\n" "$(DaysToKeep check)"
+	printf "      Currently: ${SETTING}%s days data will be kept${CLEARFORMAT}\n\n" "$(DaysToKeep check)"
 	printf "s.    Toggle storage location for stats and config\n"
-    printf "      Current location: ${SETTING}%s${CLEARFORMAT}\n" "$storageLocStr"
-    printf "      JFFS Available: ${jffsFreeSpaceStr}${CLEARFORMAT}\n\n"
+	printf "      Current location: ${SETTING}%s${CLEARFORMAT}\n" "$storageLocStr"
+	printf "      JFFS Available: ${jffsFreeSpaceStr}${CLEARFORMAT}\n\n"
 	printf "t.    Switch timeserver between ${SETTING}ntpd${CLRct} and ${SETTING}chronyd${CLRct}\n"
-    printf "      Currently: ${SETTING}%s${CLEARFORMAT}\n" "$(TimeServer check)"
-    printf "      Config location: ${SETTING}%s${CLEARFORMAT}\n\n" "$CONFFILE_MENU"
+	printf "      Currently: ${SETTING}%s${CLEARFORMAT}\n" "$(TimeServer check)"
+	printf "      Config location: ${SETTING}%s${CLEARFORMAT}\n\n" "$CONFFILE_MENU"
 	printf "r.    Restart ${SETTING}%s${CLEARFORMAT}\n\n" "$(TimeServer check)"
 	printf "u.    Check for updates\n"
 	printf "uf.   Update %s with latest version (force update)\n\n" "$SCRIPT_NAME"
@@ -3008,7 +3008,7 @@ _FindandRemoveMenuAddOnsSection_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-30] ##
+## Modified by Martinski W. [2025-Jul-31] ##
 ##----------------------------------------##
 Menu_Uninstall()
 {
@@ -3031,8 +3031,8 @@ Menu_Uninstall()
 
 	Get_WebUI_Page "$SCRIPT_DIR/ntpdstats_www.asp"
 	if [ -n "$MyWebPage" ] && \
-       [ "$MyWebPage" != "NONE" ] && \
-       [ -f "$TEMP_MENU_TREE" ]
+	   [ "$MyWebPage" != "NONE" ] && \
+	   [ -f "$TEMP_MENU_TREE" ]
 	then
 		sed -i "\\~$MyWebPage~d" "$TEMP_MENU_TREE"
 		rm -f "$SCRIPT_WEBPAGE_DIR/$MyWebPage"
@@ -3047,8 +3047,18 @@ Menu_Uninstall()
 	rm -rf "$SCRIPT_WEB_DIR" 2>/dev/null
 
 	Shortcut_Script delete
-	TIMESERVER_NAME="$(TimeServer check)"
-	"/opt/etc/init.d/S77$TIMESERVER_NAME" stop >/dev/null 2>&1
+
+    if [ -f /opt/etc/init.d/S77ntpd ]
+	then
+		/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
+		sleep 2 ; killall -q ntpd ; sleep 1
+	fi
+	if [ -f /opt/etc/init.d/S77chronyd ]
+	then
+		/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
+		sleep 2 ; killall -q chronyd ; sleep 1
+	fi
+
 	opkg remove --autoremove ntpd
 	opkg remove --autoremove ntp-utils
 	opkg remove --autoremove chrony
