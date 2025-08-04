@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Jul-31
+# Last Modified: 2025-Aug-03
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,8 +36,8 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.10"
-readonly SCRIPT_VERSTAG="25073122"
+readonly SCRIPT_VERSION="v3.4.11"
+readonly SCRIPT_VERSTAG="25080322"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -370,9 +370,9 @@ Update_File()
 	if [ "$1" = "S77ntpd" ] || [ "$1" = "S77chronyd" ]
 	then
 		rm -f "$SCRIPT_DIR"/S77*d
-		srvcefile="$SCRIPT_DIR/$1"
-		Download_File "$SCRIPT_REPO/$1" "$srvcefile"
-		if ! diff -q "$srvcefile" "/opt/etc/init.d/$1" >/dev/null 2>&1
+		srvceFile="$SCRIPT_DIR/$1"
+		Download_File "$SCRIPT_REPO/$1" "$srvceFile"
+		if ! diff -q "$srvceFile" "/opt/etc/init.d/$1" >/dev/null 2>&1
 		then
 			Print_Output true "New version of $1 downloaded" "$PASS"
 			TimeServer_Customise
@@ -1163,26 +1163,30 @@ _CheckFor_WebGUI_Page_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-30] ##
+## Modified by Martinski W. [2025-Aug-03] ##
 ##----------------------------------------##
 TimeServer_Customise()
 {
-	local TIMESERVER_ID="$(TimeServer check)"
+	local TIMESERVER_ID  initServicePath
+
+	TIMESERVER_ID="$(TimeServer check)"
+	initServicePath="/opt/etc/init.d/S77$TIMESERVER_ID"
 
 	if [ -f /opt/etc/init.d/S77ntpd ]
 	then
 		/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
 		sleep 2 ; killall -q ntpd ; sleep 1
+		rm -f /opt/etc/init.d/S77ntpd
 	fi
 	if [ -f /opt/etc/init.d/S77chronyd ]
 	then
 		/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
 		sleep 2 ; killall -q chronyd ; sleep 1
+		rm -f /opt/etc/init.d/S77chronyd
 	fi
-	rm -f /opt/etc/init.d/S77ntpd /opt/etc/init.d/S77chronyd
 
-	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "/opt/etc/init.d/S77$TIMESERVER_ID"
-	chmod a+x "/opt/etc/init.d/S77$TIMESERVER_ID"
+	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "$initServicePath"
+	chmod a+x "$initServicePath"
 
 	if [ "$TIMESERVER_ID" = "chronyd" ]
 	then
@@ -1195,7 +1199,7 @@ TimeServer_Customise()
 		[ ! -L /opt/etc/passwd ] && \
 		ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 	fi
-	"/opt/etc/init.d/S77$TIMESERVER_ID" restart >/dev/null 2>&1
+	"$initServicePath" restart >/dev/null 2>&1
 }
 
 ##-------------------------------------##
@@ -1204,7 +1208,7 @@ TimeServer_Customise()
 TimeServer_ServiceCheck()
 {
     local runFullCheck=true  TIMESERVER_ID
-    local initTimeServerPath  ntpxTimeServerPath
+    local initTimeServerPath  saveTimeServerPath
 
     if [ $# -gt 0 ] && [ -n "$1" ] && \
        echo "$1" | grep -qE "^(true|false)$"
@@ -1213,22 +1217,22 @@ TimeServer_ServiceCheck()
     "$runFullCheck" && Entware_Ready
     TIMESERVER_ID="$(TimeServer check)"
     initTimeServerPath="/opt/etc/init.d/S77$TIMESERVER_ID"
-    ntpxTimeServerPath="$SCRIPT_DIR/S77$TIMESERVER_ID"
+    saveTimeServerPath="$SCRIPT_DIR/S77$TIMESERVER_ID"
 
-    if "$runFullCheck" || [ ! -s "$ntpxTimeServerPath" ]
+    if "$runFullCheck" || [ ! -s "$saveTimeServerPath" ]
     then
         Update_File "S77$TIMESERVER_ID" >/dev/null 2>&1
     else
         # Make sure we have the ntpMerlin version #
-        if [ -s "$ntpxTimeServerPath" ] && [ -s "$initTimeServerPath" ] && \
-           ! diff -q "$initTimeServerPath" "$ntpxTimeServerPath" >/dev/null 2>&1 
+        if [ -s "$saveTimeServerPath" ] && [ -s "$initTimeServerPath" ] && \
+           ! diff -q "$initTimeServerPath" "$saveTimeServerPath" >/dev/null 2>&1 
         then
             "$initTimeServerPath" stop >/dev/null 2>&1
-            sleep 2 ; killall "$TIMESERVER_ID"
-            cp -fp "$ntpxTimeServerPath" "$initTimeServerPath"
+            sleep 2 ; killall -q "$TIMESERVER_ID"
+            cp -fp "$saveTimeServerPath" "$initTimeServerPath"
             chmod a+x "$initTimeServerPath"
-            "$initTimeServerPath" restart
         fi
+        [ -z "$(pidof "$TIMESERVER_ID")" ] && "$initTimeServerPath" restart
 
         # Stop & remove extraneous service script #
         if [ "$TIMESERVER_ID" = "chronyd" ] && \
@@ -2111,7 +2115,7 @@ Get_TimeServer_Stats()
 
 	echo 'var ntpstatus = "InProgress";' > /tmp/detect_ntpmerlin.js
 
-	killall ntp 2>/dev/null
+	killall -q ntp 2>/dev/null
 
 	TIMESERVER="$(TimeServer check)"
 	if [ "$TIMESERVER" = "ntpd" ]
