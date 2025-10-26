@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Aug-03
+# Last Modified: 2025-Oct-25
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.11"
-readonly SCRIPT_VERSTAG="25080322"
+readonly SCRIPT_VERSTAG="25102522"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -62,8 +62,9 @@ readonly webPageLineTabExp="\{url: \"$webPageFileRegExp\", tabName: "
 readonly webPageLineRegExp="${webPageLineTabExp}\"$SCRIPT_NAME\"\},"
 readonly BEGIN_MenuAddOnsTag="/\*\*BEGIN:_AddOns_\*\*/"
 readonly ENDIN_MenuAddOnsTag="/\*\*ENDIN:_AddOns_\*\*/"
-readonly branchx_TAG="Branch: $SCRIPT_BRANCH"
-readonly version_TAG="${SCRIPT_VERSION}_${SCRIPT_VERSTAG}"
+readonly branchxStr_TAG="[Branch: $SCRIPT_BRANCH]"
+readonly versionDev_TAG="${SCRIPT_VERSION}_${SCRIPT_VERSTAG}"
+readonly versionMod_TAG="$SCRIPT_VERSION on $ROUTER_MODEL"
 
 # For daily CRON job to trim database #
 readonly defTrimDB_Hour=3
@@ -2480,9 +2481,40 @@ PressEnter()
 	return 0
 }
 
+##-------------------------------------##
+## Added by Martinski W. [2025-Oct-25] ##
+##-------------------------------------##
+_CenterTextStr_()
+{
+    if [ $# -lt 2 ] || [ -z "$1" ] || [ -z "$2" ] || \
+       ! echo "$2" | grep -qE "^[1-9][0-9]+$"
+    then echo ; return 1
+    fi
+    local stringLen="${#1}"
+    local space1Len="$((($2 - stringLen)/2))"
+    local space2Len="$space1Len"
+    local totalLen="$((space1Len + stringLen + space2Len))"
+
+    if [ "$totalLen" -lt "$2" ]
+    then space2Len="$((space2Len + 1))"
+    elif [ "$totalLen" -gt "$2" ]
+    then space1Len="$((space1Len - 1))"
+    fi
+    if [ "$space1Len" -gt 0 ] && [ "$space2Len" -gt 0 ]
+    then printf "%*s%s%*s" "$space1Len" '' "$1" "$space2Len" ''
+    else printf "%s" "$1"
+    fi
+}
+
+##----------------------------------------##
+## Modified by Martinski W. [2025-Oct-25] ##
+##----------------------------------------##
 ScriptHeader()
 {
 	clear
+	local spaceLen=56  colorCT
+	[ "$SCRIPT_BRANCH" = "master" ] && colorCT="$GRNct" || colorCT="$MGNTct"
+
 	DST_ENABLED="$(nvram get time_zone_dst)"
 	if ! Validate_Number "$DST_ENABLED"; then DST_ENABLED=0; fi
 	if [ "$DST_ENABLED" -eq 0 ]; then
@@ -2498,30 +2530,29 @@ ScriptHeader()
 	DST_END="$(echo "$DST_SETTING" | cut -f2 -d",")"
 	DST_END="Month $(echo "$DST_END" | cut -f1 -d".") Week $(echo "$DST_END" | cut -f2 -d".") Weekday $(echo "$DST_END" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_END" | cut -f3 -d"." | cut -f2 -d"/")"
 
-	printf "\n"
-	printf "${BOLD}##############################################################${CLEARFORMAT}\\n"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##           _           __  __              _  _           ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##          | |         |  \/  |            | |(_)          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##    _ __  | |_  _ __  | \  / |  ___  _ __ | | _  _ __     ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##   | '_ \ | __|| '_ \ | |\/| | / _ \| '__|| || || '_ \    ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##   | | | || |_ | |_) || |  | ||  __/| |   | || || | | |   ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##   |_| |_| \__|| .__/ |_|  |_| \___||_|   |_||_||_| |_|   ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##               | |                                        ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##               |_|                                        ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                 %9s on %-18s          ##${CLEARFORMAT}\n" "$SCRIPT_VERSION" "$ROUTER_MODEL"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##     Forked from https://github.com/jackyaz/ntpMerlin     ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                 DST is currently %-8s                ##${CLEARFORMAT}\n" "$DST_ENABLED"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##      DST starts on %-33s     ##${CLEARFORMAT}\\n" "$DST_START"
-	printf "${BOLD}##      DST ends on %-33s       ##${CLEARFORMAT}\\n" "$DST_END"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##############################################################${CLEARFORMAT}\\n"
-	printf "\n"
+	echo
+	printf "${BOLD}##############################################################${CLRct}\n"
+	printf "${BOLD}##           _           __  __              _  _           ##${CLRct}\n"
+	printf "${BOLD}##          | |         |  \/  |            | |(_)          ##${CLRct}\n"
+	printf "${BOLD}##    _ __  | |_  _ __  | \  / |  ___  _ __ | | _  _ __     ##${CLRct}\n"
+	printf "${BOLD}##   | '_ \ | __|| '_ \ | |\/| | / _ \| '__|| || || '_ \    ##${CLRct}\n"
+	printf "${BOLD}##   | | | || |_ | |_) || |  | ||  __/| |   | || || | | |   ##${CLRct}\n"
+	printf "${BOLD}##   |_| |_| \__|| .__/ |_|  |_| \___||_|   |_||_||_| |_|   ##${CLRct}\n"
+	printf "${BOLD}##               | |                                        ##${CLRct}\n"
+	printf "${BOLD}##               |_|                                        ##${CLRct}\n"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}## ${GRNct}%s${CLRct}${BOLD} ##${CLRct}\n" "$(_CenterTextStr_ "$versionMod_TAG" "$spaceLen")"
+	printf "${BOLD}## ${colorCT}%s${CLRct}${BOLD} ##${CLRct}\n" "$(_CenterTextStr_ "$branchxStr_TAG" "$spaceLen")"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLRct}\n"
+	printf "${BOLD}##     Forked from https://github.com/jackyaz/ntpMerlin     ##${CLRct}\n"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##                 DST is currently %-8s                ##${CLRct}\n" "$DST_ENABLED"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##      DST starts on %-33s     ##${CLRct}\n" "$DST_START"
+	printf "${BOLD}##      DST ends on %-33s       ##${CLRct}\n" "$DST_END"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##############################################################${CLRct}\n\n"
 }
 
 ##----------------------------------------##
@@ -2882,6 +2913,7 @@ Menu_Startup()
 	Create_Symlinks
 	Auto_Startup create 2>/dev/null
 	Auto_Cron create 2>/dev/null
+	Set_Version_Custom_Settings local "$SCRIPT_VERSION"
 	Auto_ServiceEvent create 2>/dev/null
 	NTP_Firmware_Check
 	Shortcut_Script create
@@ -3236,8 +3268,8 @@ JFFS_LowFreeSpaceStatus="OK"
 updateJFFS_SpaceInfo=false
 
 if [ "$SCRIPT_BRANCH" = "master" ]
-then SCRIPT_VERS_INFO="[$branchx_TAG]"
-else SCRIPT_VERS_INFO="[$version_TAG, $branchx_TAG]"
+then SCRIPT_VERS_INFO=""
+else SCRIPT_VERS_INFO="[$versionDev_TAG]"
 fi
 
 ##----------------------------------------##
@@ -3259,6 +3291,7 @@ then
 	Create_Symlinks
 	Auto_Startup create 2>/dev/null
 	Auto_Cron create 2>/dev/null
+	Set_Version_Custom_Settings local "$SCRIPT_VERSION"
 	Auto_ServiceEvent create 2>/dev/null
 	Shortcut_Script create
 	_CheckFor_WebGUI_Page_
@@ -3278,7 +3311,8 @@ case "$1" in
 		exit 0
 	;;
 	startup)
-		Menu_Startup "$2"
+		shift
+		Menu_Startup "$@"
 		exit 0
 	;;
 	generate)
