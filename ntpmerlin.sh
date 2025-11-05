@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Oct-25
+# Last Modified: 2025-Nov-04
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.11"
-readonly SCRIPT_VERSTAG="25102522"
+readonly SCRIPT_VERSTAG="25110422"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -138,7 +138,7 @@ Print_Output()
 		    "$PASS") prioNum=6 ;; #INFO#
 		          *) prioNum=5 ;; #NOTICE#
 		esac
-		logger -t "$SCRIPT_NAME" -p $prioNum "$2"
+		logger -t "${SCRIPT_NAME}_[$$]" -p $prioNum "$2"
 	fi
 	printf "${BOLD}${3}%s${CLEARFORMAT}\n\n" "$2"
 }
@@ -1265,6 +1265,7 @@ ScriptStorageLocation()
 			mkdir -p "/opt/share/$SCRIPT_NAME_LOWER.d/"
 			rm -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/ntpdstats.db-shm"
 			rm -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/ntpdstats.db-wal"
+			[ -d "/opt/share/$SCRIPT_NAME_LOWER.d/csv" ] && rm -fr "/opt/share/$SCRIPT_NAME_LOWER.d/csv"
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/config" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/config.bak" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
@@ -1289,6 +1290,7 @@ ScriptStorageLocation()
 			TIMESERVER_NAME="$(TimeServer check)"
 			sed -i 's/^STORAGELOCATION.*$/STORAGELOCATION=jffs/' "$SCRIPT_CONF"
 			mkdir -p "/jffs/addons/$SCRIPT_NAME_LOWER.d/"
+			[ -d "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" ] && rm -fr "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv"
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/csv" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/config.bak" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
@@ -1877,7 +1879,7 @@ _JFFS_WarnLowFreeSpace_()
    then
        JFFS_WarningLogTime update "$currTimeSecs"
        logMsgStr="${logTagStr} JFFS Available Free Space ($1) is getting LOW."
-       logger -t "$SCRIPT_NAME" -p $logPriNum "$logMsgStr"
+       logger -t "${SCRIPT_NAME}_[$$]" -p $logPriNum "$logMsgStr"
    fi
 }
 
@@ -2881,6 +2883,20 @@ Menu_Install()
 	MainMenu
 }
 
+##-------------------------------------##
+## Added by Martinski W. [2025-Nov-04] ##
+##-------------------------------------##
+_SetParameters_()
+{
+    if [ -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" ]
+    then SCRIPT_STORAGE_DIR="/opt/share/$SCRIPT_NAME_LOWER.d"
+    else SCRIPT_STORAGE_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
+    fi
+    SCRIPT_CONF="$SCRIPT_STORAGE_DIR/config"
+    NTPDSTATS_DB="$SCRIPT_STORAGE_DIR/ntpdstats.db"
+    CSV_OUTPUT_DIR="$SCRIPT_STORAGE_DIR/csv"
+}
+
 ##----------------------------------------##
 ## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
@@ -2902,11 +2918,14 @@ Menu_Startup()
 	fi
 
 	NTP_Ready
+	Entware_Ready
+	_SetParameters_
 	Check_Lock
 
 	if [ "$1" != "force" ]; then
 		sleep 7
 	fi
+
 	Create_Dirs
 	Conf_Exists
 	ScriptStorageLocation load true
@@ -3256,14 +3275,7 @@ else sqlDBLogFilePath="/tmp/var/tmp/$sqlDBLogFileName"
 fi
 _SQLCheckDBLogFileSize_
 
-if [ -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" ]
-then SCRIPT_STORAGE_DIR="/opt/share/$SCRIPT_NAME_LOWER.d"
-else SCRIPT_STORAGE_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
-fi
-
-SCRIPT_CONF="$SCRIPT_STORAGE_DIR/config"
-NTPDSTATS_DB="$SCRIPT_STORAGE_DIR/ntpdstats.db"
-CSV_OUTPUT_DIR="$SCRIPT_STORAGE_DIR/csv"
+_SetParameters_
 JFFS_LowFreeSpaceStatus="OK"
 updateJFFS_SpaceInfo=false
 
