@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Jul-31
+# Last Modified: 2025-Nov-04
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,8 +36,8 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.10"
-readonly SCRIPT_VERSTAG="25073122"
+readonly SCRIPT_VERSION="v3.4.11"
+readonly SCRIPT_VERSTAG="25110422"
 SCRIPT_BRANCH="master"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -62,8 +62,9 @@ readonly webPageLineTabExp="\{url: \"$webPageFileRegExp\", tabName: "
 readonly webPageLineRegExp="${webPageLineTabExp}\"$SCRIPT_NAME\"\},"
 readonly BEGIN_MenuAddOnsTag="/\*\*BEGIN:_AddOns_\*\*/"
 readonly ENDIN_MenuAddOnsTag="/\*\*ENDIN:_AddOns_\*\*/"
-readonly branchx_TAG="Branch: $SCRIPT_BRANCH"
-readonly version_TAG="${SCRIPT_VERSION}_${SCRIPT_VERSTAG}"
+readonly branchxStr_TAG="[Branch: $SCRIPT_BRANCH]"
+readonly versionDev_TAG="${SCRIPT_VERSION}_${SCRIPT_VERSTAG}"
+readonly versionMod_TAG="$SCRIPT_VERSION on $ROUTER_MODEL"
 
 # For daily CRON job to trim database #
 readonly defTrimDB_Hour=3
@@ -137,7 +138,7 @@ Print_Output()
 		    "$PASS") prioNum=6 ;; #INFO#
 		          *) prioNum=5 ;; #NOTICE#
 		esac
-		logger -t "$SCRIPT_NAME" -p $prioNum "$2"
+		logger -t "${SCRIPT_NAME}_[$$]" -p $prioNum "$2"
 	fi
 	printf "${BOLD}${3}%s${CLEARFORMAT}\n\n" "$2"
 }
@@ -370,9 +371,9 @@ Update_File()
 	if [ "$1" = "S77ntpd" ] || [ "$1" = "S77chronyd" ]
 	then
 		rm -f "$SCRIPT_DIR"/S77*d
-		srvcefile="$SCRIPT_DIR/$1"
-		Download_File "$SCRIPT_REPO/$1" "$srvcefile"
-		if ! diff -q "$srvcefile" "/opt/etc/init.d/$1" >/dev/null 2>&1
+		srvceFile="$SCRIPT_DIR/$1"
+		Download_File "$SCRIPT_REPO/$1" "$srvceFile"
+		if ! diff -q "$srvceFile" "/opt/etc/init.d/$1" >/dev/null 2>&1
 		then
 			Print_Output true "New version of $1 downloaded" "$PASS"
 			TimeServer_Customise
@@ -1163,26 +1164,30 @@ _CheckFor_WebGUI_Page_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-30] ##
+## Modified by Martinski W. [2025-Aug-03] ##
 ##----------------------------------------##
 TimeServer_Customise()
 {
-	local TIMESERVER_ID="$(TimeServer check)"
+	local TIMESERVER_ID  initServicePath
+
+	TIMESERVER_ID="$(TimeServer check)"
+	initServicePath="/opt/etc/init.d/S77$TIMESERVER_ID"
 
 	if [ -f /opt/etc/init.d/S77ntpd ]
 	then
 		/opt/etc/init.d/S77ntpd stop >/dev/null 2>&1
 		sleep 2 ; killall -q ntpd ; sleep 1
+		rm -f /opt/etc/init.d/S77ntpd
 	fi
 	if [ -f /opt/etc/init.d/S77chronyd ]
 	then
 		/opt/etc/init.d/S77chronyd stop >/dev/null 2>&1
 		sleep 2 ; killall -q chronyd ; sleep 1
+		rm -f /opt/etc/init.d/S77chronyd
 	fi
-	rm -f /opt/etc/init.d/S77ntpd /opt/etc/init.d/S77chronyd
 
-	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "/opt/etc/init.d/S77$TIMESERVER_ID"
-	chmod a+x "/opt/etc/init.d/S77$TIMESERVER_ID"
+	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "$initServicePath"
+	chmod a+x "$initServicePath"
 
 	if [ "$TIMESERVER_ID" = "chronyd" ]
 	then
@@ -1195,7 +1200,7 @@ TimeServer_Customise()
 		[ ! -L /opt/etc/passwd ] && \
 		ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 	fi
-	"/opt/etc/init.d/S77$TIMESERVER_ID" restart >/dev/null 2>&1
+	"$initServicePath" restart >/dev/null 2>&1
 }
 
 ##-------------------------------------##
@@ -1204,7 +1209,7 @@ TimeServer_Customise()
 TimeServer_ServiceCheck()
 {
     local runFullCheck=true  TIMESERVER_ID
-    local initTimeServerPath  ntpxTimeServerPath
+    local initTimeServerPath  saveTimeServerPath
 
     if [ $# -gt 0 ] && [ -n "$1" ] && \
        echo "$1" | grep -qE "^(true|false)$"
@@ -1213,22 +1218,22 @@ TimeServer_ServiceCheck()
     "$runFullCheck" && Entware_Ready
     TIMESERVER_ID="$(TimeServer check)"
     initTimeServerPath="/opt/etc/init.d/S77$TIMESERVER_ID"
-    ntpxTimeServerPath="$SCRIPT_DIR/S77$TIMESERVER_ID"
+    saveTimeServerPath="$SCRIPT_DIR/S77$TIMESERVER_ID"
 
-    if "$runFullCheck" || [ ! -s "$ntpxTimeServerPath" ]
+    if "$runFullCheck" || [ ! -s "$saveTimeServerPath" ]
     then
         Update_File "S77$TIMESERVER_ID" >/dev/null 2>&1
     else
         # Make sure we have the ntpMerlin version #
-        if [ -s "$ntpxTimeServerPath" ] && [ -s "$initTimeServerPath" ] && \
-           ! diff -q "$initTimeServerPath" "$ntpxTimeServerPath" >/dev/null 2>&1 
+        if [ -s "$saveTimeServerPath" ] && [ -s "$initTimeServerPath" ] && \
+           ! diff -q "$initTimeServerPath" "$saveTimeServerPath" >/dev/null 2>&1 
         then
             "$initTimeServerPath" stop >/dev/null 2>&1
-            sleep 2 ; killall "$TIMESERVER_ID"
-            cp -fp "$ntpxTimeServerPath" "$initTimeServerPath"
+            sleep 2 ; killall -q "$TIMESERVER_ID"
+            cp -fp "$saveTimeServerPath" "$initTimeServerPath"
             chmod a+x "$initTimeServerPath"
-            "$initTimeServerPath" restart
         fi
+        [ -z "$(pidof "$TIMESERVER_ID")" ] && "$initTimeServerPath" restart
 
         # Stop & remove extraneous service script #
         if [ "$TIMESERVER_ID" = "chronyd" ] && \
@@ -1260,6 +1265,7 @@ ScriptStorageLocation()
 			mkdir -p "/opt/share/$SCRIPT_NAME_LOWER.d/"
 			rm -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/ntpdstats.db-shm"
 			rm -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/ntpdstats.db-wal"
+			[ -d "/opt/share/$SCRIPT_NAME_LOWER.d/csv" ] && rm -fr "/opt/share/$SCRIPT_NAME_LOWER.d/csv"
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/config" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/config.bak" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
@@ -1284,6 +1290,7 @@ ScriptStorageLocation()
 			TIMESERVER_NAME="$(TimeServer check)"
 			sed -i 's/^STORAGELOCATION.*$/STORAGELOCATION=jffs/' "$SCRIPT_CONF"
 			mkdir -p "/jffs/addons/$SCRIPT_NAME_LOWER.d/"
+			[ -d "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" ] && rm -fr "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv"
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/csv" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/config.bak" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
@@ -1872,7 +1879,7 @@ _JFFS_WarnLowFreeSpace_()
    then
        JFFS_WarningLogTime update "$currTimeSecs"
        logMsgStr="${logTagStr} JFFS Available Free Space ($1) is getting LOW."
-       logger -t "$SCRIPT_NAME" -p $logPriNum "$logMsgStr"
+       logger -t "${SCRIPT_NAME}_[$$]" -p $logPriNum "$logMsgStr"
    fi
 }
 
@@ -2111,7 +2118,7 @@ Get_TimeServer_Stats()
 
 	echo 'var ntpstatus = "InProgress";' > /tmp/detect_ntpmerlin.js
 
-	killall ntp 2>/dev/null
+	killall -q ntp 2>/dev/null
 
 	TIMESERVER="$(TimeServer check)"
 	if [ "$TIMESERVER" = "ntpd" ]
@@ -2476,9 +2483,40 @@ PressEnter()
 	return 0
 }
 
+##-------------------------------------##
+## Added by Martinski W. [2025-Oct-25] ##
+##-------------------------------------##
+_CenterTextStr_()
+{
+    if [ $# -lt 2 ] || [ -z "$1" ] || [ -z "$2" ] || \
+       ! echo "$2" | grep -qE "^[1-9][0-9]+$"
+    then echo ; return 1
+    fi
+    local stringLen="${#1}"
+    local space1Len="$((($2 - stringLen)/2))"
+    local space2Len="$space1Len"
+    local totalLen="$((space1Len + stringLen + space2Len))"
+
+    if [ "$totalLen" -lt "$2" ]
+    then space2Len="$((space2Len + 1))"
+    elif [ "$totalLen" -gt "$2" ]
+    then space1Len="$((space1Len - 1))"
+    fi
+    if [ "$space1Len" -gt 0 ] && [ "$space2Len" -gt 0 ]
+    then printf "%*s%s%*s" "$space1Len" '' "$1" "$space2Len" ''
+    else printf "%s" "$1"
+    fi
+}
+
+##----------------------------------------##
+## Modified by Martinski W. [2025-Oct-25] ##
+##----------------------------------------##
 ScriptHeader()
 {
 	clear
+	local spaceLen=56  colorCT
+	[ "$SCRIPT_BRANCH" = "master" ] && colorCT="$GRNct" || colorCT="$MGNTct"
+
 	DST_ENABLED="$(nvram get time_zone_dst)"
 	if ! Validate_Number "$DST_ENABLED"; then DST_ENABLED=0; fi
 	if [ "$DST_ENABLED" -eq 0 ]; then
@@ -2494,30 +2532,29 @@ ScriptHeader()
 	DST_END="$(echo "$DST_SETTING" | cut -f2 -d",")"
 	DST_END="Month $(echo "$DST_END" | cut -f1 -d".") Week $(echo "$DST_END" | cut -f2 -d".") Weekday $(echo "$DST_END" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_END" | cut -f3 -d"." | cut -f2 -d"/")"
 
-	printf "\n"
-	printf "${BOLD}##############################################################${CLEARFORMAT}\\n"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##           _           __  __              _  _           ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##          | |         |  \/  |            | |(_)          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##    _ __  | |_  _ __  | \  / |  ___  _ __ | | _  _ __     ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##   | '_ \ | __|| '_ \ | |\/| | / _ \| '__|| || || '_ \    ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##   | | | || |_ | |_) || |  | ||  __/| |   | || || | | |   ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##   |_| |_| \__|| .__/ |_|  |_| \___||_|   |_||_||_| |_|   ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##               | |                                        ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##               |_|                                        ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                 %9s on %-18s          ##${CLEARFORMAT}\n" "$SCRIPT_VERSION" "$ROUTER_MODEL"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##     Forked from https://github.com/jackyaz/ntpMerlin     ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##                 DST is currently %-8s                ##${CLEARFORMAT}\n" "$DST_ENABLED"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##      DST starts on %-33s     ##${CLEARFORMAT}\\n" "$DST_START"
-	printf "${BOLD}##      DST ends on %-33s       ##${CLEARFORMAT}\\n" "$DST_END"
-	printf "${BOLD}##                                                          ##${CLEARFORMAT}\\n"
-	printf "${BOLD}##############################################################${CLEARFORMAT}\\n"
-	printf "\n"
+	echo
+	printf "${BOLD}##############################################################${CLRct}\n"
+	printf "${BOLD}##           _           __  __              _  _           ##${CLRct}\n"
+	printf "${BOLD}##          | |         |  \/  |            | |(_)          ##${CLRct}\n"
+	printf "${BOLD}##    _ __  | |_  _ __  | \  / |  ___  _ __ | | _  _ __     ##${CLRct}\n"
+	printf "${BOLD}##   | '_ \ | __|| '_ \ | |\/| | / _ \| '__|| || || '_ \    ##${CLRct}\n"
+	printf "${BOLD}##   | | | || |_ | |_) || |  | ||  __/| |   | || || | | |   ##${CLRct}\n"
+	printf "${BOLD}##   |_| |_| \__|| .__/ |_|  |_| \___||_|   |_||_||_| |_|   ##${CLRct}\n"
+	printf "${BOLD}##               | |                                        ##${CLRct}\n"
+	printf "${BOLD}##               |_|                                        ##${CLRct}\n"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}## ${GRNct}%s${CLRct}${BOLD} ##${CLRct}\n" "$(_CenterTextStr_ "$versionMod_TAG" "$spaceLen")"
+	printf "${BOLD}## ${colorCT}%s${CLRct}${BOLD} ##${CLRct}\n" "$(_CenterTextStr_ "$branchxStr_TAG" "$spaceLen")"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLRct}\n"
+	printf "${BOLD}##     Forked from https://github.com/jackyaz/ntpMerlin     ##${CLRct}\n"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##                 DST is currently %-8s                ##${CLRct}\n" "$DST_ENABLED"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##      DST starts on %-33s     ##${CLRct}\n" "$DST_START"
+	printf "${BOLD}##      DST ends on %-33s       ##${CLRct}\n" "$DST_END"
+	printf "${BOLD}##                                                          ##${CLRct}\n"
+	printf "${BOLD}##############################################################${CLRct}\n\n"
 }
 
 ##----------------------------------------##
@@ -2846,6 +2883,20 @@ Menu_Install()
 	MainMenu
 }
 
+##-------------------------------------##
+## Added by Martinski W. [2025-Nov-04] ##
+##-------------------------------------##
+_SetParameters_()
+{
+    if [ -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" ]
+    then SCRIPT_STORAGE_DIR="/opt/share/$SCRIPT_NAME_LOWER.d"
+    else SCRIPT_STORAGE_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
+    fi
+    SCRIPT_CONF="$SCRIPT_STORAGE_DIR/config"
+    NTPDSTATS_DB="$SCRIPT_STORAGE_DIR/ntpdstats.db"
+    CSV_OUTPUT_DIR="$SCRIPT_STORAGE_DIR/csv"
+}
+
 ##----------------------------------------##
 ## Modified by Martinski W. [2025-Jul-30] ##
 ##----------------------------------------##
@@ -2867,17 +2918,21 @@ Menu_Startup()
 	fi
 
 	NTP_Ready
+	Entware_Ready
+	_SetParameters_
 	Check_Lock
 
 	if [ "$1" != "force" ]; then
 		sleep 7
 	fi
+
 	Create_Dirs
 	Conf_Exists
 	ScriptStorageLocation load true
 	Create_Symlinks
 	Auto_Startup create 2>/dev/null
 	Auto_Cron create 2>/dev/null
+	Set_Version_Custom_Settings local "$SCRIPT_VERSION"
 	Auto_ServiceEvent create 2>/dev/null
 	NTP_Firmware_Check
 	Shortcut_Script create
@@ -3220,20 +3275,13 @@ else sqlDBLogFilePath="/tmp/var/tmp/$sqlDBLogFileName"
 fi
 _SQLCheckDBLogFileSize_
 
-if [ -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" ]
-then SCRIPT_STORAGE_DIR="/opt/share/$SCRIPT_NAME_LOWER.d"
-else SCRIPT_STORAGE_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
-fi
-
-SCRIPT_CONF="$SCRIPT_STORAGE_DIR/config"
-NTPDSTATS_DB="$SCRIPT_STORAGE_DIR/ntpdstats.db"
-CSV_OUTPUT_DIR="$SCRIPT_STORAGE_DIR/csv"
+_SetParameters_
 JFFS_LowFreeSpaceStatus="OK"
 updateJFFS_SpaceInfo=false
 
 if [ "$SCRIPT_BRANCH" = "master" ]
-then SCRIPT_VERS_INFO="[$branchx_TAG]"
-else SCRIPT_VERS_INFO="[$version_TAG, $branchx_TAG]"
+then SCRIPT_VERS_INFO=""
+else SCRIPT_VERS_INFO="[$versionDev_TAG]"
 fi
 
 ##----------------------------------------##
@@ -3255,6 +3303,7 @@ then
 	Create_Symlinks
 	Auto_Startup create 2>/dev/null
 	Auto_Cron create 2>/dev/null
+	Set_Version_Custom_Settings local "$SCRIPT_VERSION"
 	Auto_ServiceEvent create 2>/dev/null
 	Shortcut_Script create
 	_CheckFor_WebGUI_Page_
@@ -3274,7 +3323,8 @@ case "$1" in
 		exit 0
 	;;
 	startup)
-		Menu_Startup "$2"
+		shift
+		Menu_Startup "$@"
 		exit 0
 	;;
 	generate)
