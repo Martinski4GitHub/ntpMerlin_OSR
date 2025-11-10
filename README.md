@@ -18,6 +18,11 @@ Using your preferred SSH client/terminal, copy and paste the following command, 
 /usr/sbin/curl --retry 3 "https://raw.githubusercontent.com/AMTM-OSR/ntpMerlin/master/ntpmerlin.sh" -o "/jffs/scripts/ntpmerlin" && chmod 0755 /jffs/scripts/ntpmerlin && /jffs/scripts/ntpmerlin install
 ```
 
+## Prerequisites
+Asuswrt-Merlin running on a supported ASUS router
+Entware installed, preferably using amtm
+jffs scripts enabled in the firmware; installing Entware should have taken care of this part
+
 ## Usage
 ### WebUI
 ntpMerlin can be configured via the WebUI, in the Addons section.
