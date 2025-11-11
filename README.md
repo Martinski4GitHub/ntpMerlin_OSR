@@ -19,9 +19,9 @@ Using your preferred SSH client/terminal, copy and paste the following command, 
 ```
 
 ## Prerequisites
-Asuswrt-Merlin running on a supported ASUS router
-Entware installed, preferably using amtm
-jffs scripts enabled in the firmware; installing Entware should have taken care of this part
+- Asuswrt-Merlin running on a supported ASUS router
+- Entware installed, preferably using amtm
+- jffs scripts enabled in the firmware; this can be set manually, and installing Entware via amtm usually takes care of it
 
 ## Usage
 ### WebUI
