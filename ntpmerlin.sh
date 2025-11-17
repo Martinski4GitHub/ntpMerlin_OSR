@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Nov-04
+# Last Modified: 2025-Nov-16
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,9 +36,9 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.11"
-readonly SCRIPT_VERSTAG="25110422"
-SCRIPT_BRANCH="master"
+readonly SCRIPT_VERSION="v3.4.12"
+readonly SCRIPT_VERSTAG="25111608"
+SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
 readonly SCRIPT_WEBPAGE_DIR="$(readlink -f /www/user)"
@@ -478,7 +478,7 @@ Validate_Number()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jan-19] ##
+## Modified by Martinski W. [2025-Nov-15] ##
 ##----------------------------------------##
 Conf_FromSettings()
 {
@@ -507,7 +507,7 @@ Conf_FromSettings()
 			rm -f "$TMPFILE"
 			rm -f "${SETTINGSFILE}.bak"
 
-			if diff "$SCRIPT_CONF" "${SCRIPT_CONF}.bak" | grep -q "STORAGELOCATION="
+			if diff -U0 "$SCRIPT_CONF" "${SCRIPT_CONF}.bak" | grep -qE "[-+]STORAGELOCATION="
 			then
 				STORAGEtype="$(ScriptStorageLocation check)"
 				if [ "$STORAGEtype" = "jffs" ]
@@ -521,13 +521,15 @@ Conf_FromSettings()
 				then
 				    ScriptStorageLocation usb
 				fi
+				Create_Dirs
+				Conf_Exists
 				Create_Symlinks
 			fi
-			if diff "$SCRIPT_CONF" "${SCRIPT_CONF}.bak" | grep -qE "(OUTPUTTIMEMODE=|DAYSTOKEEP=|LASTXRESULTS=)"
+			if diff -U0 "$SCRIPT_CONF" "${SCRIPT_CONF}.bak" | grep -qE "(OUTPUTTIMEMODE=|DAYSTOKEEP=|LASTXRESULTS=)"
 			then
 				Generate_CSVs
 			fi
-			if diff "$SCRIPT_CONF" "${SCRIPT_CONF}.bak" | grep -q "TIMESERVER="
+			if diff -U0 "$SCRIPT_CONF" "${SCRIPT_CONF}.bak" | grep -qE "[-+]TIMESERVER="
 			then
 				TimeServer "$(TimeServer check)"
 			fi
@@ -1265,7 +1267,10 @@ ScriptStorageLocation()
 			mkdir -p "/opt/share/$SCRIPT_NAME_LOWER.d/"
 			rm -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/ntpdstats.db-shm"
 			rm -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/ntpdstats.db-wal"
-			[ -d "/opt/share/$SCRIPT_NAME_LOWER.d/csv" ] && rm -fr "/opt/share/$SCRIPT_NAME_LOWER.d/csv"
+			if [ -d "/opt/share/$SCRIPT_NAME_LOWER.d/csv" ] && \
+			   [ -d "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" ]
+			then rm -fr "/opt/share/$SCRIPT_NAME_LOWER.d/csv"
+			fi
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/config" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/jffs/addons/$SCRIPT_NAME_LOWER.d/config.bak" "/opt/share/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
@@ -1290,7 +1295,10 @@ ScriptStorageLocation()
 			TIMESERVER_NAME="$(TimeServer check)"
 			sed -i 's/^STORAGELOCATION.*$/STORAGELOCATION=jffs/' "$SCRIPT_CONF"
 			mkdir -p "/jffs/addons/$SCRIPT_NAME_LOWER.d/"
-			[ -d "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" ] && rm -fr "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv"
+			if [ -d "/opt/share/$SCRIPT_NAME_LOWER.d/csv" ] && \
+			   [ -d "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv" ]
+			then rm -fr "/jffs/addons/$SCRIPT_NAME_LOWER.d/csv"
+			fi
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/csv" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/config" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null
 			mv -f "/opt/share/$SCRIPT_NAME_LOWER.d/config.bak" "/jffs/addons/$SCRIPT_NAME_LOWER.d/" 2>/dev/null

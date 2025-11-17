@@ -1,7 +1,7 @@
 # ntpMerlin
 
-## v3.4.11
-### Updated on 2025-Nov-08
+## v3.4.12
+### Updated on 2025-Nov-16
 
 ## About
 ntpMerlin implements an NTP time server for AsusWRT Merlin with charts for daily, weekly and monthly summaries of performance. A choice between ntpd and chrony is available.
