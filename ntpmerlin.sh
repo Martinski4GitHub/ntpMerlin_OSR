@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Nov-16
+# Last Modified: 2025-Dec-15
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,8 +36,8 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.12"
-readonly SCRIPT_VERSTAG="25111608"
+readonly SCRIPT_VERSION="v3.4.13"
+readonly SCRIPT_VERSTAG="25121522"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -112,6 +112,8 @@ readonly PassBGRNct="\e[30;102m"
 readonly WarnBYLWct="\e[30;103m"
 readonly WarnIMGNct="\e[45m"
 readonly WarnBMGNct="\e[30;105m"
+readonly BOLDUNDERLN="\e[1;4m"
+readonly menuSepStr="${BOLD}##############################################################${CLRct}"
 
 ### End of output format variables ###
 
@@ -1423,8 +1425,9 @@ DaysToKeep()
 			while true
 			do
 				ScriptHeader
-				printf "${BOLD}Current number of days to keep data: ${GRNct}${daysToKeep}${CLRct}\n\n"
-				printf "${BOLD}Please enter the maximum number of days\nto keep the data for [${MINvalue}-${MAXvalue}] (e=Exit):${CLEARFORMAT}  "
+				printf " ${BOLD}Current number of days to keep data: ${GRNct}${daysToKeep}${CLRct}\n\n"
+				printf " ${BOLD}Please enter the maximum number of days\n"
+				printf " to keep the data for [${MINvalue}-${MAXvalue}] (e=Exit):${CLEARFORMAT}  "
 				read -r daystokeep_choice
 				if [ -z "$daystokeep_choice" ] && \
 				   echo "$daysToKeep" | grep -qE "^([1-9][0-9]{1,2})$" && \
@@ -1438,11 +1441,11 @@ DaysToKeep()
 					break
 				elif ! Validate_Number "$daystokeep_choice"
 				then
-					printf "\n${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLEARFORMAT}\n"
+					printf "\n ${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLEARFORMAT}\n"
 					PressEnter
 				elif [ "$daystokeep_choice" -lt "$MINvalue" ] || [ "$daystokeep_choice" -gt "$MAXvalue" ]
 				then
-					printf "\n${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLEARFORMAT}\n"
+					printf "\n ${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLEARFORMAT}\n"
 					PressEnter
 				else
 					daysToKeep="$daystokeep_choice"
@@ -1479,8 +1482,9 @@ LastXResults()
 			while true
 			do
 				ScriptHeader
-				printf "${BOLD}Current number of results to display: ${GRNct}${lastXResults}${CLRct}\n\n"
-				printf "${BOLD}Please enter the maximum number of results\nto display in the WebUI [${MINvalue}-${MAXvalue}] (e=Exit):${CLEARFORMAT}  "
+				printf " ${BOLD}Current number of results to display: ${GRNct}${lastXResults}${CLRct}\n\n"
+				printf " ${BOLD}Please enter the maximum number of results\n"
+				printf " to display in the WebUI [${MINvalue}-${MAXvalue}] (e=Exit):${CLEARFORMAT}  "
 				read -r lastx_choice
 				if [ -z "$lastx_choice" ] && \
 				   echo "$lastXResults" | grep -qE "^([1-9][0-9]{0,2})$" && \
@@ -1494,11 +1498,11 @@ LastXResults()
 					break
 				elif ! Validate_Number "$lastx_choice"
 				then
-					printf "\n${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLEARFORMAT}\n"
+					printf "\n ${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLEARFORMAT}\n"
 					PressEnter
 				elif [ "$lastx_choice" -lt "$MINvalue" ] || [ "$lastx_choice" -gt "$MAXvalue" ]
 				then
-					printf "\n${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLEARFORMAT}\n"
+					printf "\n ${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLEARFORMAT}\n"
 					PressEnter
 				else
 					lastXResults="$lastx_choice"
@@ -2517,30 +2521,37 @@ _CenterTextStr_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Oct-25] ##
+## Modified by Martinski W. [2025-Dec-15] ##
 ##----------------------------------------##
 ScriptHeader()
 {
-	clear
-	local spaceLen=56  colorCT
+	local spaceLen=56  colorCT  showFullInfo=false
+
+	if [ $# -gt 0 ] && [ "$1" = "true" ]
+	then showFullInfo=true
+	fi
 	[ "$SCRIPT_BRANCH" = "master" ] && colorCT="$GRNct" || colorCT="$MGNTct"
 
-	DST_ENABLED="$(nvram get time_zone_dst)"
-	if ! Validate_Number "$DST_ENABLED"; then DST_ENABLED=0; fi
-	if [ "$DST_ENABLED" -eq 0 ]; then
-		DST_ENABLED="Inactive"
-	else
-		DST_ENABLED="Active"
+	if "$showFullInfo"
+	then
+		DST_ENABLED="$(nvram get time_zone_dst)"
+		if ! Validate_Number "$DST_ENABLED"
+		then DST_ENABLED=0
+		fi
+		if [ "$DST_ENABLED" -ne 0 ]
+		then DST_ENABLED="Active"
+		else DST_ENABLED="Inactive"
+		fi
+
+		DST_SETTING="$(nvram get time_zone_dstoff)"
+		DST_SETTING="$(echo "$DST_SETTING" | sed 's/M//g')"
+		DST_START="$(echo "$DST_SETTING" | cut -f1 -d",")"
+		DST_START="Month $(echo "$DST_START" | cut -f1 -d".") Week $(echo "$DST_START" | cut -f2 -d".") Weekday $(echo "$DST_START" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_START" | cut -f3 -d"." | cut -f2 -d"/")"
+		DST_END="$(echo "$DST_SETTING" | cut -f2 -d",")"
+		DST_END="Month $(echo "$DST_END" | cut -f1 -d".") Week $(echo "$DST_END" | cut -f2 -d".") Weekday $(echo "$DST_END" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_END" | cut -f3 -d"." | cut -f2 -d"/")"
 	fi
 
-	DST_SETTING="$(nvram get time_zone_dstoff)"
-	DST_SETTING="$(echo "$DST_SETTING" | sed 's/M//g')"
-	DST_START="$(echo "$DST_SETTING" | cut -f1 -d",")"
-	DST_START="Month $(echo "$DST_START" | cut -f1 -d".") Week $(echo "$DST_START" | cut -f2 -d".") Weekday $(echo "$DST_START" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_START" | cut -f3 -d"." | cut -f2 -d"/")"
-	DST_END="$(echo "$DST_SETTING" | cut -f2 -d",")"
-	DST_END="Month $(echo "$DST_END" | cut -f1 -d".") Week $(echo "$DST_END" | cut -f2 -d".") Weekday $(echo "$DST_END" | cut -f3 -d"." | cut -f1 -d"/") Hour $(echo "$DST_END" | cut -f3 -d"." | cut -f2 -d"/")"
-
-	echo
+	clear ; echo
 	printf "${BOLD}##############################################################${CLRct}\n"
 	printf "${BOLD}##           _           __  __              _  _           ##${CLRct}\n"
 	printf "${BOLD}##          | |         |  \/  |            | |(_)          ##${CLRct}\n"
@@ -2557,34 +2568,114 @@ ScriptHeader()
 	printf "${BOLD}##           https://github.com/AMTM-OSR/ntpMerlin          ##${CLRct}\n"
 	printf "${BOLD}##     Forked from https://github.com/jackyaz/ntpMerlin     ##${CLRct}\n"
 	printf "${BOLD}##                                                          ##${CLRct}\n"
+
+	if "$showFullInfo"
+	then
 	printf "${BOLD}##                 DST is currently %-8s                ##${CLRct}\n" "$DST_ENABLED"
 	printf "${BOLD}##                                                          ##${CLRct}\n"
 	printf "${BOLD}##      DST starts on %-33s     ##${CLRct}\n" "$DST_START"
 	printf "${BOLD}##      DST ends on %-33s       ##${CLRct}\n" "$DST_END"
 	printf "${BOLD}##                                                          ##${CLRct}\n"
+	fi
 	printf "${BOLD}##############################################################${CLRct}\n\n"
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-30] ##
+## Modified by Martinski W. [2025-Dec-15] ##
 ##----------------------------------------##
-MainMenu()
+_HandleInvalidMenuOption_()
 {
-	local menuOption  storageLocStr  ntpRedirectStatus
+	[ -n "$menuOption" ] && \
+	printf "\n${REDct}INVALID input [$menuOption]${CLRct}"
+	printf "\nPlease choose a valid option.\n\n"
+}
+
+##----------------------------------------##
+## Modified by Martinski W. [2025-Dec-15] ##
+##----------------------------------------##
+_Menu_TimeServerOptions_()
+{
+	local menuOption  exitMenu=false  TIMESERVER_NAME  configPath
+
+	TIMESERVER_NAME="$(TimeServer check)"
+	configPath="UNKNOWN"
+	if [ "$TIMESERVER_NAME" = "ntpd" ]
+	then configPath="$SCRIPT_STORAGE_DIR/ntp.conf"
+	elif [ "$TIMESERVER_NAME" = "chronyd" ]
+	then configPath="$SCRIPT_STORAGE_DIR/chrony.conf"
+	fi
+
+	ScriptHeader
+	printf " ${BOLDUNDERLN}${GRNct}Time Server Options${CLRct}\n\n"
+
+	printf "   ${GRNct}1${CLRct}. Edit ${SETTING}%s${CLRct} time server configuration file\n\n" "$(TimeServer check)"
+	printf "  ${GRNct}ts${CLRct}. Switch time server between ${SETTING}ntpd${CLRct} and ${SETTING}chronyd${CLRct}\n"
+	printf "      Currently: ${SETTING}%s${CLRct}\n" "$(TimeServer check)"
+	printf "      Config location: ${SETTING}%s${CLRct}\n\n" "$configPath"
+	printf "  ${GRNct}rs${CLRct}. Restart ${SETTING}%s${CLRct}\n\n" "$(TimeServer check)"
+	printf "   ${GRNct}e${CLRct}. Return to Main Menu\n"
+	printf "\n${menuSepStr}\n\n"
+
+	while true
+	do
+		printf "Choose an option:  "
+		read -r menuOption
+		case "$menuOption" in
+			1)
+				printf "\n"
+				if Check_Lock menu
+				then
+					Menu_Edit && PressEnter
+				fi
+				break
+			;;
+			ts)
+				printf "\n"
+				if Check_Lock menu
+				then
+					if [ "$(TimeServer check)" = "ntpd" ]
+					then
+						TimeServer chronyd
+					elif [ "$(TimeServer check)" = "chronyd" ]
+					then
+						TimeServer ntpd
+					fi
+					Clear_Lock
+				fi
+				PressEnter
+				break
+			;;
+			rs)
+				printf "\n"
+				TIMESERVER_NAME="$(TimeServer check)"
+				Print_Output true "Restarting $TIMESERVER_NAME..." "$PASS"
+				TimeServer_ServiceCheck
+				"/opt/etc/init.d/S77$TIMESERVER_NAME" restart >/dev/null 2>&1
+				PressEnter
+				break
+			;;
+			e) exitMenu=true
+			   break
+			;;
+			*)
+				_HandleInvalidMenuOption_
+				PressEnter
+				break
+			;;
+		esac
+	done
+
+	"$exitMenu" && return 0
+	_Menu_TimeServerOptions_
+}
+
+##----------------------------------------##
+## Modified by Martinski W. [2025-Dec-15] ##
+##----------------------------------------##
+_Menu_DatabaseOptions_()
+{
+	local menuOption  exitMenu=false  storageLocStr
 	local jffsFreeSpace  jffsFreeSpaceStr  jffsSpaceMsgTag
-
-	if Auto_NAT check
-	then ntpRedirectStatus="${PassBGRNct} ENABLED ${CLRct}"
-	else ntpRedirectStatus="${CritIREDct} DISABLED ${CLRct}"
-	fi
-
-	TIMESERVER_NAME_MENU="$(TimeServer check)"
-	CONFFILE_MENU=""
-	if [ "$TIMESERVER_NAME_MENU" = "ntpd" ]
-	then CONFFILE_MENU="$SCRIPT_STORAGE_DIR/ntp.conf"
-	elif [ "$TIMESERVER_NAME_MENU" = "chronyd" ]
-	then CONFFILE_MENU="$SCRIPT_STORAGE_DIR/chrony.conf"
-	fi
 
 	storageLocStr="$(ScriptStorageLocation check | tr 'a-z' 'A-Z')"
 
@@ -2601,34 +2692,21 @@ MainMenu()
 		jffsFreeSpaceStr="${WarnBYLWct} $jffsFreeSpace ${CLRct}  ${jffsSpaceMsgTag}${CLRct}"
 	fi
 
-	printf "WebUI for %s is available at:\n${SETTING}%s${CLEARFORMAT}\n\n" "$SCRIPT_NAME" "$(Get_WebUI_URL)"
+	ScriptHeader
+	printf " ${BOLDUNDERLN}${GRNct}Database Options${CLRct}\n\n"
 
-	printf "1.    Update timeserver stats now\n"
-	printf "      Database size: ${SETTING}%s${CLEARFORMAT}\n\n" "$(_GetFileSize_ "$NTPDSTATS_DB" HRx)"
-	printf "2.    Toggle redirect of all NTP traffic to %s\n" "$SCRIPT_NAME"
-	printf "      Currently: ${ntpRedirectStatus}${CLEARFORMAT}\n\n"
-	printf "3.    Edit ${SETTING}%s${CLEARFORMAT} configuration file\n\n" "$(TimeServer check)"
-	printf "4.    Toggle time output mode\n"
-	printf "      Currently: ${SETTING}%s${CLEARFORMAT} time values will be used for CSV exports\n\n" "$(OutputTimeMode check)"
-	printf "5.    Set number of timeserver stats to show in WebUI\n"
-	printf "      Currently: ${SETTING}%s results will be shown${CLEARFORMAT}\n\n" "$(LastXResults check)"
-	printf "6.    Set number of days data to keep in database\n"
-	printf "      Currently: ${SETTING}%s days data will be kept${CLEARFORMAT}\n\n" "$(DaysToKeep check)"
-	printf "s.    Toggle storage location for stats and config\n"
-	printf "      Current location: ${SETTING}%s${CLEARFORMAT}\n" "$storageLocStr"
-	printf "      JFFS Available: ${jffsFreeSpaceStr}${CLEARFORMAT}\n\n"
-	printf "t.    Switch timeserver between ${SETTING}ntpd${CLRct} and ${SETTING}chronyd${CLRct}\n"
-	printf "      Currently: ${SETTING}%s${CLEARFORMAT}\n" "$(TimeServer check)"
-	printf "      Config location: ${SETTING}%s${CLEARFORMAT}\n\n" "$CONFFILE_MENU"
-	printf "r.    Restart ${SETTING}%s${CLEARFORMAT}\n\n" "$(TimeServer check)"
-	printf "u.    Check for updates\n"
-	printf "uf.   Update %s with latest version (force update)\n\n" "$SCRIPT_NAME"
-	printf "rs.   Reset %s database / delete all data\n\n" "$SCRIPT_NAME"
-	printf "e.    Exit %s\\n\n" "$SCRIPT_NAME"
-	printf "z.    Uninstall %s\n" "$SCRIPT_NAME"
-	printf "\n"
-	printf "${BOLD}##############################################################${CLEARFORMAT}\n"
-	printf "\n"
+	printf "   ${GRNct}1${CLRct}. Toggle time output mode\n"
+	printf "      Currently: ${SETTING}%s${CLRct} time values will be used for CSV exports\n\n" "$(OutputTimeMode check)"
+	printf "   ${GRNct}2${CLRct}. Set number of time server database stats to show in WebUI\n"
+	printf "      Currently: ${SETTING}%s results will be shown${CLRct}\n\n" "$(LastXResults check)"
+	printf "   ${GRNct}3${CLRct}. Set maximum number of days data to keep in database\n"
+	printf "      Currently: ${SETTING}%s days data will be kept${CLRct}\n\n" "$(DaysToKeep check)"
+	printf "   ${GRNct}s${CLRct}. Toggle storage location for database stats and config\n"
+	printf "      Current location: ${SETTING}%s${CLRct}\n" "$storageLocStr"
+	printf "      JFFS Available: ${jffsFreeSpaceStr}${CLRct}\n\n"
+	printf "  ${GRNct}rs${CLRct}. Reset %s database / delete all data\n\n" "$SCRIPT_NAME"
+	printf "   ${GRNct}e${CLRct}. Return to Main Menu\n"
+	printf "\n${menuSepStr}\n\n"
 
 	while true
 	do
@@ -2637,53 +2715,21 @@ MainMenu()
 		case "$menuOption" in
 			1)
 				printf "\n"
-				TimeServer_ServiceCheck
-				if Check_Lock menu
+				if [ "$(OutputTimeMode check)" = "unix" ]
 				then
-					Get_TimeServer_Stats
-					Clear_Lock
-				fi
-				PressEnter
-				break
-			;;
-			2)
-				printf "\n"
-				if Auto_NAT check
-				then
-					Auto_NAT delete
-					NTP_Redirect delete
-					printf "${BOLD}NTP Redirect has been ${REDct}DISABLED${CLEARFORMAT}\n\n"
-				else
-					Auto_NAT create
-					NTP_Redirect create
-					printf "${BOLD}NTP Redirect has been ${GRNct}ENABLED${CLEARFORMAT}\n\n"
-				fi
-				PressEnter
-				break
-			;;
-			3)
-				printf "\n"
-				if Check_Lock menu; then
-					Menu_Edit
-				fi
-				PressEnter
-				break
-			;;
-			4)
-				printf "\n"
-				if [ "$(OutputTimeMode check)" = "unix" ]; then
 					OutputTimeMode non-unix
-				elif [ "$(OutputTimeMode check)" = "non-unix" ]; then
+				elif [ "$(OutputTimeMode check)" = "non-unix" ]
+				then
 					OutputTimeMode unix
 				fi
 				break
 			;;
-			5)
+			2)
 				printf "\n"
 				LastXResults update && PressEnter
 				break
 			;;
-			6)
+			3)
 				printf "\n"
 				DaysToKeep update && PressEnter
 				break
@@ -2710,32 +2756,102 @@ MainMenu()
 				fi
 				break
 			;;
-			t)
+			rs)
 				printf "\n"
 				if Check_Lock menu
 				then
-					if [ "$(TimeServer check)" = "ntpd" ]; then
-						TimeServer chronyd
-					elif [ "$(TimeServer check)" = "chronyd" ]; then
-						TimeServer ntpd
-					fi
+					Menu_ResetDB
 					Clear_Lock
 				fi
 				PressEnter
 				break
 			;;
-			r)
-				printf "\n"
-				TIMESERVER_ID="$(TimeServer check)"
-				Print_Output true "Restarting $TIMESERVER_ID..." "$PASS"
-				TimeServer_ServiceCheck
-				"/opt/etc/init.d/S77$TIMESERVER_ID" restart >/dev/null 2>&1
+			e) exitMenu=true
+			   break
+			;;
+			*)
+				_HandleInvalidMenuOption_
 				PressEnter
+				break
+			;;
+		esac
+	done
+
+	"$exitMenu" && return 0
+	_Menu_DatabaseOptions_
+}
+
+##----------------------------------------##
+## Modified by Martinski W. [2025-Dec-15] ##
+##----------------------------------------##
+MainMenu()
+{
+	local menuOption  ntpRedirectStatus
+
+	if Auto_NAT check
+	then ntpRedirectStatus="${PassBGRNct} ENABLED ${CLRct}"
+	else ntpRedirectStatus="${CritIREDct} DISABLED ${CLRct}"
+	fi
+	_UpdateJFFS_FreeSpaceInfo_
+
+	printf " WebUI for %s is available at:\n" "$SCRIPT_NAME"
+	printf " ${SETTING}%s${CLRct}\n\n" "$(Get_WebUI_URL)"
+
+	printf "   ${GRNct}1${CLRct}. Update time server stats now\n"
+	printf "      Database size: ${SETTING}%s${CLRct}\n\n" "$(_GetFileSize_ "$NTPDSTATS_DB" HRx)"
+	printf "   ${GRNct}2${CLRct}. Toggle redirect of all NTP traffic to %s\n" "$SCRIPT_NAME"
+	printf "      Currently: ${ntpRedirectStatus}${CLRct}\n\n"
+	printf "   ${GRNct}3${CLRct}. Configure time server options\n\n"
+	printf "   ${GRNct}4${CLRct}. Configure database options\n\n"
+	printf "   ${GRNct}u${CLRct}. Check for updates\n"
+	printf "  ${GRNct}uf${CLRct}. Update %s with latest version (force update)\n\n" "$SCRIPT_NAME"
+	printf "   ${GRNct}e${CLRct}. Exit %s\n\n" "$SCRIPT_NAME"
+	printf "   ${GRNct}z${CLRct}. Uninstall %s\n" "$SCRIPT_NAME"
+	printf "\n${menuSepStr}\n\n"
+
+	while true
+	do
+		printf "Choose an option:  "
+		read -r menuOption
+		case "$menuOption" in
+			1)
+				printf "\n"
+				TimeServer_ServiceCheck
+				if Check_Lock menu
+				then
+					Get_TimeServer_Stats
+					Clear_Lock
+				fi
+				PressEnter
+				break
+			;;
+			2)
+				printf "\n"
+				if Auto_NAT check
+				then
+					Auto_NAT delete
+					NTP_Redirect delete
+					printf "${BOLD}NTP Redirect has been ${REDct}DISABLED${CLRct}\n\n"
+				else
+					Auto_NAT create
+					NTP_Redirect create
+					printf "${BOLD}NTP Redirect has been ${GRNct}ENABLED${CLRct}\n\n"
+				fi
+				PressEnter
+				break
+			;;
+			3)
+				_Menu_TimeServerOptions_
+				break
+			;;
+			4)
+				_Menu_DatabaseOptions_
 				break
 			;;
 			u)
 				printf "\n"
-				if Check_Lock menu; then
+				if Check_Lock menu
+				then
 					Update_Version
 					Clear_Lock
 				fi
@@ -2744,31 +2860,23 @@ MainMenu()
 			;;
 			uf)
 				printf "\n"
-				if Check_Lock menu; then
+				if Check_Lock menu
+				then
 					Update_Version force
 					Clear_Lock
 				fi
 				PressEnter
 				break
 			;;
-			rs)
-				printf "\n"
-				if Check_Lock menu; then
-					Menu_ResetDB
-					Clear_Lock
-				fi
-				PressEnter
-				break
-			;;
 			e)
-				ScriptHeader
-				printf "\n${BOLD}Thanks for using %s!${CLEARFORMAT}\n\n\n" "$SCRIPT_NAME"
+				ScriptHeader true
+				printf "\n${BOLD}Thanks for using %s!${CLRct}\n\n\n" "$SCRIPT_NAME"
 				exit 0
 			;;
 			z)
 				while true
 				do
-					printf "\n${BOLD}Are you sure you want to uninstall %s? (y/n)${CLEARFORMAT}  " "$SCRIPT_NAME"
+					printf "\n${BOLD}Are you sure you want to uninstall %s? (y/n)${CLRct}  " "$SCRIPT_NAME"
 					read -r confirm
 					case "$confirm" in
 						y|Y)
@@ -2782,16 +2890,14 @@ MainMenu()
 				done
 			;;
 			*)
-				[ -n "$menuOption" ] && \
-				printf "\n${REDct}INVALID input [$menuOption]${CLEARFORMAT}"
-				printf "\nPlease choose a valid option.\n\n"
+				_HandleInvalidMenuOption_
 				PressEnter
 				break
 			;;
 		esac
 	done
 
-	ScriptHeader
+	ScriptHeader true
 	MainMenu
 }
 
@@ -2887,7 +2993,7 @@ Menu_Install()
 	Get_TimeServer_Stats
 	Clear_Lock
 
-	ScriptHeader
+	ScriptHeader true
 	MainMenu
 }
 
@@ -2949,56 +3055,62 @@ Menu_Startup()
 	Clear_Lock
 }
 
+##----------------------------------------##
+## Modified by Martinski W. [2025-Dec-15] ##
+##----------------------------------------##
 Menu_Edit()
 {
-	texteditor=""
-	exitmenu="false"
+	local textEditor=""  exitMenu=false  retCode  CONF_FILE
 
-	printf "\n${BOLD}A choice of text editors is available:${CLEARFORMAT}\n"
-	printf "1.    nano (recommended for beginners)\n"
-	printf "2.    vi\n"
-	printf "\ne.    Exit to main menu\n"
+	printf "\n${BOLD}A choice of text editors is available:${CLRct}\n\n"
+	printf "  ${GRNct}1${CLRct}. nano (recommended for beginners)\n"
+	printf "  ${GRNct}2${CLRct}. vi\n\n"
+	printf "  ${GRNct}e${CLRct}. Go back\n"
 
 	while true
 	do
-		printf "\n${BOLD}Choose an option:${CLEARFORMAT}  "
-		read -r editor
-		case "$editor" in
-			1)
-				texteditor="nano -K"
-				break
-			;;
-			2)
-				texteditor="vi"
-				break
-			;;
-			e)
-				exitmenu="true"
-				break
-			;;
+		printf "\n${BOLD}Choose an option:${CLRct}  "
+		read -r editorOption
+		case "$editorOption" in
+			1) textEditor="nano -K" ; break
+			   ;;
+			2) textEditor="vi" ; break
+			   ;;
+			e) exitMenu=true ; break
+			   ;;
 			*)
-				printf "\nPlease choose a valid option\n\n"
+				if [ -z "$editorOption" ]
+				then exitMenu=true ; break
+				fi
+				printf "\n Please choose a valid option\n\n"
 			;;
 		esac
 	done
 
-	if [ "$exitmenu" != "true" ]
+	if "$exitMenu"
 	then
+		echo ; retCode=1
+	else
 		TIMESERVER_NAME="$(TimeServer check)"
-		CONFFILE=""
-		if [ "$TIMESERVER_NAME" = "ntpd" ]; then
-			CONFFILE="$SCRIPT_STORAGE_DIR/ntp.conf"
-		elif [ "$TIMESERVER_NAME" = "chronyd" ]; then
-			CONFFILE="$SCRIPT_STORAGE_DIR/chrony.conf"
+		CONF_FILE=""
+		if [ "$TIMESERVER_NAME" = "ntpd" ]
+		then
+			CONF_FILE="$SCRIPT_STORAGE_DIR/ntp.conf"
+		elif [ "$TIMESERVER_NAME" = "chronyd" ]
+		then
+			CONF_FILE="$SCRIPT_STORAGE_DIR/chrony.conf"
 		fi
-		oldmd5="$(md5sum "$CONFFILE" | awk '{print $1}')"
-		$texteditor "$CONFFILE"
-		newmd5="$(md5sum "$CONFFILE" | awk '{print $1}')"
-		if [ "$oldmd5" != "$newmd5" ]; then
+		oldmd5="$(md5sum "$CONF_FILE" | awk '{print $1}')"
+		$textEditor "$CONF_FILE"
+		newmd5="$(md5sum "$CONF_FILE" | awk '{print $1}')"
+		if [ "$oldmd5" != "$newmd5" ]
+		then
 			"/opt/etc/init.d/S77$TIMESERVER_NAME" restart >/dev/null 2>&1
 		fi
+		echo ; retCode=0
 	fi
 	Clear_Lock
+	return "$retCode"
 }
 
 Menu_ResetDB()
@@ -3316,7 +3428,7 @@ then
 	Shortcut_Script create
 	_CheckFor_WebGUI_Page_
 	Process_Upgrade
-	ScriptHeader
+	ScriptHeader true
 	MainMenu
 	exit 0
 fi
@@ -3425,12 +3537,12 @@ case "$1" in
 		exit 0
 	;;
 	about)
-		ScriptHeader
+		ScriptHeader true
 		Show_About
 		exit 0
 	;;
 	help)
-		ScriptHeader
+		ScriptHeader true
 		Show_Help
 		exit 0
 	;;
