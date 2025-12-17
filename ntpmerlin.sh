@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2025-Dec-15
+# Last Modified: 2025-Dec-16
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.13"
-readonly SCRIPT_VERSTAG="25121522"
+readonly SCRIPT_VERSTAG="25121620"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -1427,7 +1427,7 @@ DaysToKeep()
 				ScriptHeader
 				printf " ${BOLD}Current number of days to keep data: ${GRNct}${daysToKeep}${CLRct}\n\n"
 				printf " ${BOLD}Please enter the maximum number of days\n"
-				printf " to keep the data for [${MINvalue}-${MAXvalue}] (e=Exit):${CLEARFORMAT}  "
+				printf " to keep the data for [${GRNct}${MINvalue}-${MAXvalue}${CLRct}] (e=Exit):${CLRct}  "
 				read -r daystokeep_choice
 				if [ -z "$daystokeep_choice" ] && \
 				   echo "$daysToKeep" | grep -qE "^([1-9][0-9]{1,2})$" && \
@@ -1441,11 +1441,11 @@ DaysToKeep()
 					break
 				elif ! Validate_Number "$daystokeep_choice"
 				then
-					printf "\n ${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLEARFORMAT}\n"
+					printf "\n${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLRct}\n"
 					PressEnter
 				elif [ "$daystokeep_choice" -lt "$MINvalue" ] || [ "$daystokeep_choice" -gt "$MAXvalue" ]
 				then
-					printf "\n ${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLEARFORMAT}\n"
+					printf "\n${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLRct}\n"
 					PressEnter
 				else
 					daysToKeep="$daystokeep_choice"
@@ -1484,7 +1484,7 @@ LastXResults()
 				ScriptHeader
 				printf " ${BOLD}Current number of results to display: ${GRNct}${lastXResults}${CLRct}\n\n"
 				printf " ${BOLD}Please enter the maximum number of results\n"
-				printf " to display in the WebUI [${MINvalue}-${MAXvalue}] (e=Exit):${CLEARFORMAT}  "
+				printf " to display in the WebUI [${GRNct}${MINvalue}-${MAXvalue}${CLRct}] (e=Exit):${CLRct}  "
 				read -r lastx_choice
 				if [ -z "$lastx_choice" ] && \
 				   echo "$lastXResults" | grep -qE "^([1-9][0-9]{0,2})$" && \
@@ -1498,11 +1498,11 @@ LastXResults()
 					break
 				elif ! Validate_Number "$lastx_choice"
 				then
-					printf "\n ${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLEARFORMAT}\n"
+					printf "\n${ERR}Please enter a valid number [${MINvalue}-${MAXvalue}].${CLRct}\n"
 					PressEnter
 				elif [ "$lastx_choice" -lt "$MINvalue" ] || [ "$lastx_choice" -gt "$MAXvalue" ]
 				then
-					printf "\n ${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLEARFORMAT}\n"
+					printf "\n${ERR}Please enter a number between ${MINvalue} and ${MAXvalue}.${CLRct}\n"
 					PressEnter
 				else
 					lastXResults="$lastx_choice"
