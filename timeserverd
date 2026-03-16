@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# Last Modified: 2025-Jul-29
+# Last Modified: 2026-Mar-15
 #
 # shellcheck disable=SC2039 disable=SC3043
 #
 trap '' HUP
 
-readonly VERSIONstr="3.4.10"
+readonly VERSIONstr="3.4.14"
 readonly logTagStr="timeserverd_[$$]"
 
 ##-------------------------------------##
@@ -84,7 +84,7 @@ _IsZombieProcess_()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-29] ##
+## Modified by Martinski W. [2026-Mar-15] ##
 ##----------------------------------------##
 if [ "$1" = "S77ntpd" ]
 then
@@ -95,6 +95,13 @@ then
 		rm -f /opt/etc/init.d/S77chronyd
 	fi
 
+	# Double-check that the Entware package was installed #
+	if [ -x /opt/bin/opkg ] && [ ! -x /opt/sbin/ntpd ]
+	then
+		logger -st "$logTagStr" -p 3 "**ERROR** The 'ntpd' Entware package is NOT installed."
+		return 1
+	fi
+
 	ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
 	logger -t "$logTagStr" "ntpd was started"
 
@@ -103,9 +110,9 @@ then
 		sleep 5
 		if [ "$(pidof ntpd | wc -w)" -eq 0 ] || _IsZombieProcess_ ntpd
 		then
-			logger -t "$logTagStr" "ntpd dead, restarting..."
+			logger -t "$logTagStr" -p 4 "ntpd dead, restarting..."
 			ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
-			logger -t "$logTagStr" "ntpd was restarted"
+			logger -t "$logTagStr" -p 4 "ntpd was restarted"
 		fi
 	done
 
@@ -133,6 +140,13 @@ then
 	[ ! -L /opt/etc/passwd ] && \
 	ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 
+	# Double-check that the Entware package was installed #
+	if [ -x /opt/bin/opkg ] && [ ! -x /opt/sbin/chronyd ]
+	then
+		logger -st "$logTagStr" -p 3 "**ERROR** The 'chrony' Entware package is NOT installed."
+		return 1
+	fi
+
 	chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
 	logger -t "$logTagStr" "chronyd was started"
 
@@ -141,9 +155,9 @@ then
 		sleep 5
 		if [ "$(pidof chronyd | wc -w)" -eq 0 ] || _IsZombieProcess_ chronyd
 		then
-			logger -t "$logTagStr" "chronyd dead, restarting..."
+			logger -t "$logTagStr" -p 4 "chronyd dead, restarting..."
 			chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
-			logger -t "$logTagStr" "chronyd was restarted"
+			logger -t "$logTagStr" -p 4 "chronyd was restarted"
 		fi
 	done
 fi
