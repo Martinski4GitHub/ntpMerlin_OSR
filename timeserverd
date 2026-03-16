@@ -99,7 +99,7 @@ then
 	if [ -x /opt/bin/opkg ] && [ ! -x /opt/sbin/ntpd ]
 	then
 		logger -st "$logTagStr" -p 3 "**ERROR** The 'ntpd' Entware package is NOT installed."
-		return 1
+		exit 1
 	fi
 
 	ntpd -c "$SCRIPT_STORAGE_DIR/ntp.conf" -g > /dev/null 2>&1 &
@@ -144,7 +144,7 @@ then
 	if [ -x /opt/bin/opkg ] && [ ! -x /opt/sbin/chronyd ]
 	then
 		logger -st "$logTagStr" -p 3 "**ERROR** The 'chrony' Entware package is NOT installed."
-		return 1
+		exit 1
 	fi
 
 	chronyd -r -u nobody -f "$SCRIPT_STORAGE_DIR/chrony.conf" > /dev/null 2>&1 &
@@ -161,3 +161,5 @@ then
 		fi
 	done
 fi
+
+#EOF#
