@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2026-Feb-18
+# Last Modified: 2026-Mar-15
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -37,7 +37,7 @@
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
 readonly SCRIPT_VERSION="v3.4.14"
-readonly SCRIPT_VERSTAG="26021800"
+readonly SCRIPT_VERSTAG="26031520"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -1192,10 +1192,10 @@ _CheckFor_WebGUI_Page_()
 ##----------------------------------------##
 TimeServer_Customise()
 {
-	local TIMESERVER_ID  initServicePath
+	local TIMESERVER_ID  initTimeServerPath
 
 	TIMESERVER_ID="$(TimeServer check)"
-	initServicePath="/opt/etc/init.d/S77$TIMESERVER_ID"
+	initTimeServerPath="/opt/etc/init.d/S77$TIMESERVER_ID"
 
 	if [ -f /opt/etc/init.d/S77ntpd ]
 	then
@@ -1210,8 +1210,8 @@ TimeServer_Customise()
 		rm -f /opt/etc/init.d/S77chronyd
 	fi
 
-	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "$initServicePath"
-	chmod a+x "$initServicePath"
+	Download_File "$SCRIPT_REPO/S77$TIMESERVER_ID" "$initTimeServerPath"
+	chmod a+x "$initTimeServerPath"
 
 	if [ "$TIMESERVER_ID" = "chronyd" ]
 	then
@@ -1224,7 +1224,7 @@ TimeServer_Customise()
 		[ ! -L /opt/etc/passwd ] && \
 		ln -snf /etc/passwd /opt/etc/passwd 2>/dev/null
 	fi
-	"$initServicePath" restart >/dev/null 2>&1
+	"$initTimeServerPath" restart
 }
 
 ##-------------------------------------##
@@ -1257,7 +1257,9 @@ TimeServer_ServiceCheck()
             cp -fp "$saveTimeServerPath" "$initTimeServerPath"
             chmod a+x "$initTimeServerPath"
         fi
-        [ -z "$(pidof "$TIMESERVER_ID")" ] && "$initTimeServerPath" restart
+        if [ -z "$(pidof "$TIMESERVER_ID")" ]
+        then "$initTimeServerPath" restart
+        fi
 
         # Stop & remove extraneous service script #
         if [ "$TIMESERVER_ID" = "chronyd" ] && \
@@ -1384,7 +1386,7 @@ OutputTimeMode()
 }
 
 ##----------------------------------------##
-## Modified by Martinski W. [2025-Jul-29] ##
+## Modified by Martinski W. [2026-Mar-15] ##
 ##----------------------------------------##
 TimeServer()
 {
@@ -1403,6 +1405,12 @@ TimeServer()
 			fi
 			Update_File ntp.conf >/dev/null 2>&1
 			Update_File S77ntpd >/dev/null 2>&1
+
+			# Double-check that the Entware package was installed #
+			if [ -x /opt/bin/opkg ] && [ ! -x /opt/sbin/ntpd ]
+			then
+				Print_Output true "**ERROR** The 'ntpd' Entware package is NOT installed." "$CRIT"
+			fi
 		;;
 		chronyd)
 			printf "Please wait...\n"
@@ -1424,6 +1432,12 @@ TimeServer()
 			fi
 			Update_File chrony.conf >/dev/null 2>&1
 			Update_File S77chronyd >/dev/null 2>&1
+
+			# Double-check that the Entware package was installed #
+			if [ -x /opt/bin/opkg ] && [ ! -x /opt/sbin/chronyd ]
+			then
+				Print_Output true "**ERROR** The 'chrony' Entware package is NOT installed." "$CRIT"
+			fi
 		;;
 		check)
 			TIMESERVER="$(_GetConfigParam_ TIMESERVER ntpd)"
