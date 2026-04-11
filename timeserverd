@@ -1,13 +1,16 @@
 #!/bin/sh
 #
-# Last Modified: 2026-Mar-15
+# Last Modified: 2026-Apr-11
 #
 # shellcheck disable=SC2039 disable=SC3043
 #
 trap '' HUP
 
-readonly VERSIONstr="3.4.14"
+readonly VERSIONstr="3.4.15"
 readonly logTagStr="timeserverd_[$$]"
+
+# Workaround for Entware ELF binaries compiled with RUNPATH #
+unset LD_LIBRARY_PATH
 
 ##-------------------------------------##
 ## Added by Martinski W. [2025-Jul-27] ##
