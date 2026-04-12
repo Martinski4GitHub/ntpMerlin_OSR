@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2026-Mar-15
+# Last Modified: 2026-Apr-11
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,8 +36,8 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.14"
-readonly SCRIPT_VERSTAG="26031520"
+readonly SCRIPT_VERSION="v3.4.15"
+readonly SCRIPT_VERSTAG="26041103"
 SCRIPT_BRANCH="master"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -119,6 +119,9 @@ readonly BOLDUNDERLN="\e[1;4m"
 readonly menuSepStr="${BOLD}##############################################################${CLRct}"
 
 ### End of output format variables ###
+
+# Workaround for Entware ELF binaries compiled with RUNPATH #
+unset LD_LIBRARY_PATH
 
 # Give priority to built-in binaries #
 export PATH="/bin:/usr/bin:/sbin:/usr/sbin:$PATH"
