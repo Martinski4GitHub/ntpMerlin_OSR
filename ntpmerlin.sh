@@ -14,7 +14,7 @@
 ##     Forked from https://github.com/jackyaz/ntpMerlin     ##
 ##                                                          ##
 ##############################################################
-# Last Modified: 2026-Apr-11
+# Last Modified: 2026-Apr-15
 #-------------------------------------------------------------
 
 ###############       Shellcheck directives      #############
@@ -36,8 +36,8 @@
 ### Start of script variables ###
 readonly SCRIPT_NAME="ntpMerlin"
 readonly SCRIPT_NAME_LOWER="$(echo "$SCRIPT_NAME" | tr 'A-Z' 'a-z' | sed 's/d//')"
-readonly SCRIPT_VERSION="v3.4.15"
-readonly SCRIPT_VERSTAG="26041103"
+readonly SCRIPT_VERSION="v3.4.16"
+readonly SCRIPT_VERSTAG="26041500"
 SCRIPT_BRANCH="develop"
 SCRIPT_REPO="https://raw.githubusercontent.com/AMTM-OSR/$SCRIPT_NAME/$SCRIPT_BRANCH"
 readonly SCRIPT_DIR="/jffs/addons/$SCRIPT_NAME_LOWER.d"
@@ -652,7 +652,7 @@ _GetConfigParam_()
 ##----------------------------------------##
 Conf_Exists()
 {
-	if [ -f "$SCRIPT_CONF" ]
+	if [ -s "$SCRIPT_CONF" ]
 	then
 		dos2unix "$SCRIPT_CONF"
 		chmod 0644 "$SCRIPT_CONF"
@@ -681,8 +681,12 @@ Conf_Exists()
 		return 0
 	else
 		{
-		  echo "OUTPUTTIMEMODE=unix"; echo "STORAGELOCATION=jffs" ; echo "TIMESERVER=ntpd";
-		  echo "DAYSTOKEEP=30"; echo "LASTXRESULTS=10"; echo "JFFS_MSGLOGTIME=0"
+		   echo "OUTPUTTIMEMODE=unix"
+		   echo "STORAGELOCATION=jffs"
+		   echo "TIMESERVER=ntpd"
+		   echo "DAYSTOKEEP=30"
+		   echo "LASTXRESULTS=10"
+		   echo "JFFS_MSGLOGTIME=0"
 		} > "$SCRIPT_CONF"
 		return 1
 	fi
@@ -696,7 +700,7 @@ Auto_ServiceEvent()
 	local theScriptFilePath="/jffs/scripts/$SCRIPT_NAME_LOWER"
 	case $1 in
 		create)
-			if [ -f /jffs/scripts/service-event ]
+			if [ -s /jffs/scripts/service-event ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/service-event)"
 				STARTUPLINECOUNTEX="$(grep -cx 'if echo "$2" | /bin/grep -q "'"$SCRIPT_NAME_LOWER"'"; then { '"$theScriptFilePath"' service_event "$@" & }; fi # '"$SCRIPT_NAME" /jffs/scripts/service-event)"
@@ -717,14 +721,15 @@ Auto_ServiceEvent()
 				  echo 'if echo "$2" | /bin/grep -q "'"$SCRIPT_NAME_LOWER"'"; then { '"$theScriptFilePath"' service_event "$@" & }; fi # '"$SCRIPT_NAME"
 				  echo
 				} > /jffs/scripts/service-event
-				chmod 0755 /jffs/scripts/service-event
 			fi
+			chmod 0755 /jffs/scripts/service-event
 		;;
 		delete)
-			if [ -f /jffs/scripts/service-event ]
+			if [ -s /jffs/scripts/service-event ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/service-event)"
-				if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+				if [ "$STARTUPLINECOUNT" -gt 0 ]
+				then
 					sed -i -e '/# '"$SCRIPT_NAME"'/d' /jffs/scripts/service-event
 				fi
 			fi
@@ -739,7 +744,7 @@ Auto_DNSMASQ()
 {
 	case $1 in
 		create)
-			if [ -f /jffs/configs/dnsmasq.conf.add ]
+			if [ -s /jffs/configs/dnsmasq.conf.add ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/configs/dnsmasq.conf.add)"
 				STARTUPLINECOUNTEX="$(grep -cx "dhcp-option=lan,42,$(nvram get lan_ipaddr)"' # '"$SCRIPT_NAME" /jffs/configs/dnsmasq.conf.add)"
@@ -761,12 +766,12 @@ Auto_DNSMASQ()
 				  echo
 				  echo "dhcp-option=lan,42,$(nvram get lan_ipaddr)"' # '"$SCRIPT_NAME"
 				} >> /jffs/configs/dnsmasq.conf.add
-				chmod 0644 /jffs/configs/dnsmasq.conf.add
 				service restart_dnsmasq >/dev/null 2>&1
 			fi
+			chmod 0644 /jffs/configs/dnsmasq.conf.add
 		;;
 		delete)
-			if [ -f /jffs/configs/dnsmasq.conf.add ]
+			if [ -s /jffs/configs/dnsmasq.conf.add ]
 			then
 				STARTUPLINECOUNT=$(grep -c '# '"$SCRIPT_NAME" /jffs/configs/dnsmasq.conf.add)
 				if [ "$STARTUPLINECOUNT" -gt 0 ]
@@ -787,14 +792,15 @@ Auto_Startup()
 	local theScriptFilePath="/jffs/scripts/$SCRIPT_NAME_LOWER"
 	case $1 in
 		create)
-			if [ -f /jffs/scripts/services-start ]
+			if [ -s /jffs/scripts/services-start ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/services-start)"
-				if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+				if [ "$STARTUPLINECOUNT" -gt 0 ]
+				then
 					sed -i -e '/# '"$SCRIPT_NAME"'/d' /jffs/scripts/services-start
 				fi
 			fi
-			if [ -f /jffs/scripts/post-mount ]
+			if [ -s /jffs/scripts/post-mount ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/post-mount)"
 				STARTUPLINECOUNTEX="$(grep -cx '\[ -x "${1}/entware/bin/opkg" \] && \[ -x '"$theScriptFilePath"' \] && '"$theScriptFilePath"' startup "$@" & # '"$SCRIPT_NAME" /jffs/scripts/post-mount)"
@@ -816,21 +822,23 @@ Auto_Startup()
 				  echo '[ -x "${1}/entware/bin/opkg" ] && [ -x '"$theScriptFilePath"' ] && '"$theScriptFilePath"' startup "$@" & # '"$SCRIPT_NAME"
 				  echo
 				} > /jffs/scripts/post-mount
-				chmod 0755 /jffs/scripts/post-mount
 			fi
+			chmod 0755 /jffs/scripts/post-mount
 		;;
 		delete)
-			if [ -f /jffs/scripts/services-start ]
+			if [ -s /jffs/scripts/services-start ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/services-start)"
-				if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+				if [ "$STARTUPLINECOUNT" -gt 0 ]
+				then
 					sed -i -e '/# '"$SCRIPT_NAME"'/d' /jffs/scripts/services-start
 				fi
 			fi
-			if [ -f /jffs/scripts/post-mount ]
+			if [ -s /jffs/scripts/post-mount ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/post-mount)"
-				if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+				if [ "$STARTUPLINECOUNT" -gt 0 ]
+				then
 					sed -i -e '/# '"$SCRIPT_NAME"'/d' /jffs/scripts/post-mount
 				fi
 			fi
@@ -845,7 +853,7 @@ Auto_NAT()
 {
 	case $1 in
 		create)
-			if [ -f /jffs/scripts/nat-start ]
+			if [ -s /jffs/scripts/nat-start ]
 			then
 				STARTUPLINECOUNT=$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/nat-start)
 				STARTUPLINECOUNTEX=$(grep -cx "/jffs/scripts/$SCRIPT_NAME_LOWER ntpredirect"' # '"$SCRIPT_NAME" /jffs/scripts/nat-start)
@@ -867,23 +875,25 @@ Auto_NAT()
 				  echo "/jffs/scripts/$SCRIPT_NAME_LOWER ntpredirect"' # '"$SCRIPT_NAME"
 				  echo
 				} > /jffs/scripts/nat-start
-				chmod 0755 /jffs/scripts/nat-start
 			fi
+			chmod 0755 /jffs/scripts/nat-start
 		;;
 		delete)
-			if [ -f /jffs/scripts/nat-start ]
+			if [ -s /jffs/scripts/nat-start ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/nat-start)"
-				if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+				if [ "$STARTUPLINECOUNT" -gt 0 ]
+				then
 					sed -i -e '/# '"$SCRIPT_NAME"'/d' /jffs/scripts/nat-start
 				fi
 			fi
 		;;
 		check)
-			if [ -f /jffs/scripts/nat-start ]
+			if [ -s /jffs/scripts/nat-start ]
 			then
 				STARTUPLINECOUNT="$(grep -c '# '"$SCRIPT_NAME" /jffs/scripts/nat-start)"
-				if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+				if [ "$STARTUPLINECOUNT" -gt 0 ]
+				then
 					return 0
 				else
 					return 1
@@ -904,9 +914,11 @@ Auto_Cron()
 	case $1 in
 		create)
 			STARTUPLINECOUNT="$(cru l | grep -c "#${SCRIPT_NAME}#")"
-			if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+			if [ "$STARTUPLINECOUNT" -gt 0 ]
+			then
 				cru d "${SCRIPT_NAME}"
 			fi
+
 			STARTUPLINECOUNTGEN="$(cru l | grep -c "${SCRIPT_NAME}_generate")"
 			STARTUPLINECOUNTEXGEN="$(cru l | grep "${SCRIPT_NAME}_generate" | grep -c "^[*]/10 [*] [*]")"
 			if [ "$STARTUPLINECOUNTGEN" -gt 0 ] && [ "$STARTUPLINECOUNTEXGEN" -eq 0 ]
@@ -926,21 +938,25 @@ Auto_Cron()
 				cru d "${SCRIPT_NAME}_trimDB"
 				STARTUPLINECOUNTTRIM="$(cru l | grep -c "${SCRIPT_NAME}_trimDB")"
 			fi
-			if [ "$STARTUPLINECOUNTTRIM" -eq 0 ]; then
+			if [ "$STARTUPLINECOUNTTRIM" -eq 0 ]
+			then
 				cru a "${SCRIPT_NAME}_trimDB" "$defTrimDB_Mins $defTrimDB_Hour * * * $theScriptFilePath trimdb"
 			fi
 		;;
 		delete)
 			STARTUPLINECOUNT="$(cru l | grep -c "#${SCRIPT_NAME}#")"
-			if [ "$STARTUPLINECOUNT" -gt 0 ]; then
+			if [ "$STARTUPLINECOUNT" -gt 0 ]
+			then
 				cru d "$SCRIPT_NAME"
 			fi
 			STARTUPLINECOUNTGEN="$(cru l | grep -c "#${SCRIPT_NAME}_generate#")"
-			if [ "$STARTUPLINECOUNTGEN" -gt 0 ]; then
+			if [ "$STARTUPLINECOUNTGEN" -gt 0 ]
+			then
 				cru d "${SCRIPT_NAME}_generate"
 			fi
 			STARTUPLINECOUNTTRIM="$(cru l | grep -c "#${SCRIPT_NAME}_trimDB#")"
-			if [ "$STARTUPLINECOUNTTRIM" -gt 0 ]; then
+			if [ "$STARTUPLINECOUNTTRIM" -gt 0 ]
+			then
 				cru d "${SCRIPT_NAME}_trimDB"
 			fi
 		;;
